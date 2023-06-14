@@ -1,6 +1,6 @@
-# Probabalistic Bias Analysis
+# Probabalistic Bias Analysis to Approximate COVID-19 Infection Counts
 
-Applying probablistic bias analysis to approximate the true number of COVID-19 infections at the state level in all states and at the county level in Massachusetts.
+Applying probablistic bias analysis to approximate the true number of COVID-19 infections, at the state level in all states and at the county level in Massachusetts.
 
 ## Repository Structure
 
