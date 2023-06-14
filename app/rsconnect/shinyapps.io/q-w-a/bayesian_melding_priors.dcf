@@ -1,0 +1,14 @@
+name: bayesian_melding_priors
+title: bayesian_melding_priors
+username:
+account: q-w-a
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 8137748
+bundleId: 7293203
+url: https://q-w-a.shinyapps.io/bayesian_melding_priors/
+when: 1685641467.13919
+lastSyncTime: 1685641467.1392
+asMultiple: FALSE
+asStatic: FALSE
+ignoredFiles: example_for_app.html|melding_link_to_page.html|melding_link_to_page.Rmd
