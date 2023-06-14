@@ -1,0 +1,6 @@
+name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+covidestim_biweekly_state|stem|c0713e10078e199d|45343ff843b8da7e|2ab6f9fc00c54556|-1428750791||t19522.8261271654s|e530da193098a5ad|38756|rds|local|vector|||10.269||
+data_path|object|fa55dd65e1ddae16|||||||||||||||
+get_covidestim_biweekly|function|bc029be2fd03d3e7|||||||||||||||
+population_2019|object|b9e26069e693c38f|||||||||||||||
+url_2019|object|7b3507b3139e4a32|||||||||||||||

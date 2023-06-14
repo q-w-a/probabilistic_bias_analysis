@@ -1,0 +1,1156 @@
+---
+title: "Data Cleaning"
+author: "Quinn White"
+date: '`r Sys.Date()`'
+output:
+  rmdformats::readthedown:
+    df_print: paged
+    code_folding: show
+    css: ../../css/template.css
+  html_document:
+    df_print: paged
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, eval=FALSE, message=FALSE,warning=FALSE)
+
+```
+
+
+
+```{css, echo = FALSE}
+#content{
+max-width:1920px;
+}
+  
+``` 
+
+
+```{r,eval=TRUE}
+
+library(tidyverse)
+library(lubridate)
+
+
+```
+
+# File Descriptions
+
+### Demographic 
+* `population_2019.RDS` contains the population for each fips code
+* `statecodes.csv` contains state names mapped to codes from [the census](https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/)
+* `county_fips.tsv` contains fips code mapped to county name and state 
+* `state_pop.RDS` contains state population estimates from [the census](https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/state/detail/)
+
+### Covidestim
+* `covidestim_original_all.RDS` is an RDS file of the covidestim csv from the link `https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv`, unmodified; includes dates through 2021 earlier than 2021-12-02
+* `covidestim_last_weeks_all_states.RDS` contains estimates after 2021-12-02 from `https://api2.covidestim.org/latest_runs?geo_type=eq.state&select=*,timeseries(*)`
+* `covidestim_biweekly_all_states.RDS` is the cases summed for each 2-week interval, including data from `https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv` to obtain dates before 2021-12-02 (latest date available is 2021-11-30) and data from `https://api2.covidestim.org/latest_runs?geo_type=eq.state&select=*,timeseries(*)` to obtain dates after  2021-12-02
+* `covidestim_county_estimates.RDS` contains estimates of infections by date and fips from `https://covidestim.s3.us-east-2.amazonaws.com/latest/estimates.csv`, no modifications other than selecting variables of interest
+* `covidestim_biweekly_all_counties.RDS` contains biweekly aggregates for all counties, data again from link `https://covidestim.s3.us-east-2.amazonaws.com/latest/estimates.csv`
+
+
+
+### State-level
+* `tests_daily_all_states.RDS` contains daily test results by date and state from the healthdata.gov endpoint [here](https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb) 
+* `tests_biweekly_all_states.RDS` contains test results aggregated by two-week interval for each state
+
+### County-level
+* MA:
+  * `ma/archived_webpage_mass_cases.html` is the webpage [here](https://www.mass.gov/info-details/archive-of-covid-19-cases-in-massachusetts) downloaded February 18, 2023. This page contains links to access the county-level data in Massachusetts.
+  * `ma_county_original.RDS` contains the original county-level data in Massachusetts downloaded from a link on this page
+  * `ma_county_biweekly` contains data aggregated by two-week interval by county
+* MI:
+  * `mi_county_original.RDS` contains the original county-level data in Michigan downloaded from the government website [here](https://www.michigan.gov/coronavirus/stats)
+  * `mi_county_daily.RDS` contains daily data with small cleaning modifications from the original for clarity
+  * `mi_county_biweekly.RDS.RDS` contains data aggregated by two-week interval by county
+
+
+### Hospitalizations
+* `hosp_biweekly_all_states.RDS` is biweekly hospitalizations by state, accessible [here](https://dev.socrata.com/foundry/healthdata.gov/g62h-syeh)
+* `hosp_biweekly_all_counties.RDS` is biweekly hospitalizations by county, aggregated using functionality provided by [Covidestim](https://github.com/covidestim/covidestim-sources#user-content-fn-1-6778941a67ce95d7bd5fda0b62f3b0d7)
+  * `hhs-hospitalizations-by-county.RDS` is the original file from Covidestim containing weekly counts of a collection of variables related to hospitalization 
+  
+  
+```{r demographic info, eval=TRUE}
+
+# STRUCTURE: fips, state, week, negative, positive, total, posrate
+
+data_path <- paste0(here::here(), "/data/")
+
+
+########################################  
+#CENSUS DATA POPULATION ESTIMATES 
+########################################  
+url_2019 <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
+
+population_2019 <- read_csv(url_2019) %>%
+  mutate(fips_code = paste0(STATE, COUNTY)) %>%
+  select(fips_code, population =POPESTIMATE2019)
+
+population_2019 %>%
+  head()
+
+saveRDS(population_2019,
+        paste0(here::here(), 
+        "/data/demographic/population_2019.RDS"))
+
+```
+
+
+# Covidestim
+
+## Covidestim All States (State-level)
+
+Due to changes in the model to handle the Omicron wave, we have to obtain dates before 2021-12-02 from a different source than the latest runs endpoint of the API.
+
+```{r, eval = TRUE}
+
+# set end date
+end_date <- ymd("2022-02-25")
+
+```
+
+```{r covidestim all states last weeks, eval = TRUE}
+
+########################################
+# COVIDESTIM BIWEEKLY DATA ALL STATES
+########################################
+
+covidestim_api_link <- "https://api2.covidestim.org/latest_runs?geo_type=eq.state&select=*,timeseries(*)"
+covidestim <- httr::GET(covidestim_api_link)
+
+
+# only go to the 6th because these are already weekly counts
+# get the last couple weeks of 2021
+last_weeks <-jsonlite::fromJSON(
+  httr::content(covidestim,
+                as = "text",
+                encoding = "UTF-8"),
+  simplifyVector = TRUE,
+  flatten = TRUE)  %>%
+  unnest(timeseries, names_repair = "unique") %>%
+  mutate( date = ymd(date),
+          week = week( date)) %>%
+  filter(date <= end_date & year(date) > 2020)
+
+last_weeks <- last_weeks %>%
+  select(date, 
+         infections.lo = infections_p2_5,
+         infections.hi =infections_p97_5,
+         infections, created_at,
+         state = geo_name) %>%
+  mutate(week = week(date),
+         created = substr(created_at, 1, 10),
+         created = ymd(created))
+
+# remove duplicates from multiple model runs by taking most recent
+last_weeks <- last_weeks %>%
+  group_by(week,date) %>%
+  slice_max(order_by = created, n=1) %>%
+  select(-c(created,created_at)) %>%
+  mutate(year = year(date)) %>%
+  mutate(week = case_when(
+    year == 2022 ~ week + 52,
+    year == 2021 ~ week
+  )) %>%
+  ungroup()
+
+last_weeks %>%
+  head()
+
+saveRDS(last_weeks,
+         file = paste0(
+           here::here(), 
+           "/data/covidestim/covidestim_last_weeks_all_states.RDS"))
+
+```
+
+```{r,eval=TRUE}
+
+# access dates before 2021-12-02
+covidestim_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv"
+
+covidestim_allstates <- read_csv(covidestim_link)
+
+covidestim_allstates %>%
+  head()
+
+saveRDS(covidestim_allstates,
+        file = paste0(here::here(), 
+               "/data/covidestim/covidestim_original_all.RDS"))
+
+```
+
+```{r, eval = TRUE}
+
+covidestim <- readRDS(
+  paste0(
+    here::here(),
+    "/data/covidestim/covidestim_original_all.RDS"))
+
+# join data from each source to include dates before and after 2021-12-02
+covidestim <- covidestim %>%
+  select(date, contains("infections"), state) %>%
+  filter(date <= end_date & year(date) > 2020) %>%
+  mutate(week = week(date), year = year(date)) %>%
+  mutate(week = case_when(
+    year == 2022 ~ week + 52,
+    year == 2021 ~ week
+  )) %>%
+  bind_rows(last_weeks) %>%
+  group_by(week, state, year) %>%
+  summarize(across(contains("infections"), sum), date = min(date)) %>%
+  ungroup()
+
+# look at discontinuity for example
+covidestim %>%
+  filter(state == "Colorado") %>%
+  mutate(source = ifelse(date <= ymd("2021-12-02"), "1", "2")) %>%
+  ggplot(aes(x = week, 
+             y = infections,
+             color = source,
+             ymin = infections.lo,
+             ymax = infections.hi)) +
+  geom_ribbon(alpha = .5, aes(fill = source)) +
+  geom_line() +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  labs(title = "Change in Data Source, Colorado")
+
+
+covidestim %>%
+  filter(state == "Massachusetts") %>%
+  mutate(source = ifelse(date <= ymd("2021-12-02"), "1", "2")) %>%
+  ggplot(aes(x = week, 
+             y = infections,
+             color = source,
+             ymin = infections.lo,
+             ymax = infections.hi)) +
+  geom_ribbon(alpha = .5, aes(fill = source)) +
+  geom_line() +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  labs(title = "Change in Data Source, Massachusetts")
+
+
+###############
+# add biweek
+###############
+
+num_weeks <- covidestim %>% 
+  pull(week) %>% 
+  unique() %>% 
+  length()
+
+num_biweeks <- num_weeks/2
+
+biweek <- tibble(biweek = c(rep(1:num_biweeks, 2))) %>%
+  arrange(biweek)
+
+biweek_to_week <- covidestim %>%
+  select(week) %>%
+  distinct() %>%
+  arrange(week) %>%
+  cbind(biweek =biweek)
+
+# calculate biweekly sums
+covidestim_biweekly <- covidestim %>%
+  left_join(biweek_to_week) %>%
+  group_by(biweek, state)  %>%
+  mutate(across(
+    contains("infections"), 
+    sum)) %>%
+  ungroup()
+
+
+covidestim_biweekly %>%
+  select(-week) %>%
+  filter(state == "Massachusetts") %>%
+  mutate(source = ifelse(date <= ymd("2021-12-02"), "1", "2")) %>%
+  ggplot(aes(x = date, 
+             y = infections,
+             color = source,
+             ymin = infections.lo,
+             ymax = infections.hi)) +
+  geom_ribbon(alpha = .5, aes(fill = source)) +
+  geom_line() +
+  geom_point(alpha = .7) +
+  theme_bw() +
+  labs(title = "Change in Data Source, Massachusetts")
+
+
+
+# add state codes
+statecodes <- read_csv(paste0(
+  here::here(),
+  "/data/demographic/statecodes.csv")) %>%
+  rename(state_name = state,
+         state = code) %>%
+  select(-abbrev)
+
+covidestim_biweekly %>%
+  rename(state_name = state) %>%
+  left_join(statecodes) %>%
+  saveRDS(paste0(
+    here::here(),
+    "/data/covidestim/covidestim_biweekly_all_states.RDS")) 
+
+
+```
+
+
+## Covidestim All States (County Level)
+
+```{r county level estimates, eval=TRUE}
+
+# if legacy file does not exist, acquire it from link
+if(!file.exists(
+  paste0(
+      here::here(), 
+      "/data/covidestim/covidestim_county_estimates.RDS"))) {
+  
+  legacy_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/estimates.csv"
+  
+  estimates_legacy <- read_csv(legacy_link) %>%
+    select(fips, date, infections)
+  
+  saveRDS(
+    estimates_legacy,
+    paste0(
+      here::here(), 
+      "/data/covidestim/covidestim_county_estimates.RDS"))
+}
+
+
+
+
+```
+
+
+```{r,eval=TRUE}
+
+county_estimates_path <- paste0(
+  here::here(), 
+  "/data/covidestim/covidestim_county_estimates.RDS")
+
+covidestim_county <- readRDS(county_estimates_path) %>%
+  filter(date <= end_date &  year(date) > 2020) %>%
+  mutate(week = week(date),
+         year = year(date)) %>%
+  mutate(week = case_when(
+    year == 2022 ~ week + 52,
+    year == 2021 ~ week
+  ))
+  
+
+num_weeks <- covidestim_county %>% 
+  pull(week) %>% 
+  unique() %>% 
+  length()
+
+num_biweeks <- num_weeks/2
+
+biweek <- tibble(biweek = c(rep(1:num_biweeks, 2))) %>%
+  arrange(biweek)
+
+biweek_to_week <- covidestim_county %>%
+  select(week) %>%
+  distinct() %>%
+  arrange(week) %>%
+  cbind(biweek =biweek)
+
+```
+
+```{r, include = FALSE, eval = FALSE}
+########################################
+# HANDLE GROUPED COUNTIES IN MA
+########################################
+# these counties are grouped in the data reported by MA, 
+# so grouping them here
+county_fips <- read_tsv("./data/county_fips.tsv") %>%
+  dplyr::rename_with(.cols =everything(), tolower)
+
+data_ma <- readRDS("./data/ma/all.RDS")
+
+together <- county_fips %>% 
+  filter(name == "Dukes" | name == "Nantucket") %>%
+  pull(fips) %>%
+  paste0(collapse = ",")
+
+#### fix population to add populations together
+grouped <- county_fips %>% 
+  filter(name == "Dukes" | name == "Nantucket") %>%
+  pull(fips)
+
+# NOTE = it turns out covidestim doesn't actually include these counties, so nothing to fix
+covidestim_county <- covidestim_county %>%
+  mutate(fips = ifelse(fips %in% grouped, paste0(fips, sep = ","), fips))
+
+
+```
+
+```{r,eval=TRUE}
+############################################
+# SUM FOR EACH BIWEEK IN EACH COUNTY
+############################################
+
+
+covidestim_biweekly_all_counties <- covidestim_county %>%
+  left_join(biweek_to_week) %>%
+  group_by(biweek, fips)  %>%
+  mutate(across(contains("infections"), sum)) %>%
+  ungroup() 
+  
+covidestim_biweekly_all_counties %>%
+  head()
+
+covidestim_biweekly_all_counties %>% 
+  saveRDS(file = paste0(
+    here::here(), 
+    "/data/covidestim/covidestim_biweekly_all_counties.RDS"))
+
+```
+
+
+
+# State-level Tests (CDC)
+
+PCR test results at the state-level from healthdata.gov endpoint [here](https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb).
+
+
+```{r, eval=TRUE}
+
+
+dates <- readRDS(paste0(here::here(),
+                 "/data/date_to_biweek.RDS"))
+
+
+# PAGE: https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/state/detail/
+state_population_link <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/state/detail/SCPRC-EST2019-18+POP-RES.csv"
+state_pop <- read_csv(state_population_link)
+
+saveRDS(state_pop, paste0(
+  here::here(), 
+  "/data/demographic/state_pop.RDS"))
+
+statecodes <- read_csv(paste0(
+  here::here(), 
+  "/data/demographic/statecodes.csv"))
+
+state_pop <- state_pop %>%
+  left_join(statecodes, by = c("NAME" = "state")) %>%
+  select(population = POPESTIMATE2019,
+         state = code) %>%
+  filter(!is.na(state))
+
+
+```
+
+
+```{r, eval=TRUE}
+
+# split into two queries to ensure we obtain all data with the API limit
+
+dat <- httr::GET(URLencode(
+  paste0("https://healthdata.gov/resource/j8mb-icvb.json?",
+  "$where=date between '2020-12-30T12:00:00' and '2021-10-15T12:00:00'&$limit=50000")))
+
+cdc1 <-jsonlite::fromJSON(
+      httr::content(dat,
+                    as = "text", 
+                    encoding = "UTF-8")) %>%
+  as_tibble()
+
+
+dat2 <- httr::GET(URLencode(
+  paste0("https://healthdata.gov/resource/j8mb-icvb.json?",
+  "$where=date between '2021-10-15T14:00:00' and '2022-02-25T14:00:00'&$limit=50000")))
+
+
+cdc2 <-jsonlite::fromJSON(
+      httr::content(dat2,
+                    as = "text", 
+                    encoding = "UTF-8")) %>%
+  as_tibble()
+
+
+cdc <- bind_rows(cdc1, cdc2) %>%
+  mutate(date = ymd(substr(date,1,10))) %>%
+  mutate(across(c(new_results_reported), as.numeric)) %>%
+  filter(!state %in% c("MP", "AS", "GU", "PR", "VI", "MH"))
+
+# overall_outcome is the outcome of the test (Inconclusive, Negative, or Positive)
+# new_results_reported is the number with the given outcome
+cdc_pos <- cdc %>%
+  select(-c(fema_region, total_results_reported)) %>%
+  pivot_wider(names_from = c("overall_outcome"),
+              values_from = c("new_results_reported")) %>%
+  mutate(total = Inconclusive + Negative + Positive) %>%
+  rename_with(tolower) %>%
+  select(state, positive, total, date)
+
+saveRDS(cdc_pos, paste0(here::here(), 
+                        "/data/state_level/tests_daily_all_states.RDS"))
+
+
+
+cdc_pos %>%
+  left_join(dates) %>%
+  filter(!is.na(biweek)) %>%
+  group_by(biweek, state) %>%
+  mutate(positive = sum(positive, na.rm=TRUE),
+         total = sum(total, na.rm = TRUE)) %>%
+  ungroup() %>%
+  mutate(posrate = positive/total) %>%
+  left_join(state_pop) %>%
+  saveRDS(paste0(here::here(), 
+                 "/data/state_level/tests_biweekly_all_states.RDS"))
+
+```
+
+
+# State-level Tests (JHU)
+
+```{r}
+
+
+jhu <- read_csv('https://raw.githubusercontent.com/govex/COVID-19/master/data_tables/testing_data/time_series_covid19_US.csv')
+
+
+
+jhu %>%
+  mutate(date=as_date(date, format= "%m/%d/%Y")) %>%
+  filter(date >= "2021-03-03" & date <= "2022-03-02") %>% 
+  left_join(dates) %>%
+  arrange(date) %>%
+ # mutate(across(where(is.numeric), abs)) %>%
+  mutate(people_viral_positive = people_viral_positive - lag(people_viral_positive, n = 1),
+         people_viral_total = people_viral_total - lag(people_viral_total, n = 1)) %>%
+#  filter(people_viral_positive < people_viral_total) %>%
+  group_by(biweek,state) %>%
+   # mutate(across(where(is.numeric), abs)) %>%
+  mutate(across(c(people_viral_positive,people_viral_total), sum, na.rm=TRUE)) %>%
+  select(date, biweek, people_viral_positive, people_viral_total, state) %>%
+  group_by(state) %>%
+  summarize(n=n_distinct(biweek))
+
+
+
+dates <- readRDS(here('data/date_to_biweek.RDS'))
+
+library(slider)
+
+state_testing <- jhu %>%
+  mutate(date=as_date(date, format= "%m/%d/%Y")) %>%
+  filter(date >= "2021-02-26" & date <= "2022-02-25") %>% 
+  group_by(state) %>%
+  arrange(state, date) %>%
+ # mutate(across(where(is.numeric), abs)) %>%
+  mutate(people_viral_positive = people_viral_positive - lag(people_viral_positive, n = 1, order_by=date),
+         people_viral_total = people_viral_total - lag(people_viral_total, n = 1,  order_by=date),
+         ) %>%
+  mutate(people_viral_positive = ifelse(people_viral_positive < 0, NA,people_viral_positive),
+         people_viral_total = ifelse(people_viral_total < 0, NA,people_viral_total), 
+  people_viral_positive_roll = slide_dbl(people_viral_positive, mean, .before=4, .after =4),
+         people_viral_total_roll = slide_dbl(people_viral_total, mean, .before=4, .after =4),
+         #  people_viral_positive = ifelse(is.na(people_viral_positive) | people_viral_positive==0,
+         #                                 people_viral_positive_roll, 
+         #                                 people_viral_positive),
+         # people_viral_total = ifelse(is.na(people_viral_total) | people_viral_total==0,
+         #                             people_viral_total_roll,
+         #                             people_viral_total)
+  ) %>%
+  left_join(dates) %>%
+#  filter(people_viral_positive < people_viral_total) %>%
+  group_by(biweek,state) %>%
+   # mutate(across(where(is.numeric), abs)) %>%
+  mutate(across(c(people_viral_positive,people_viral_total),  function(x) sum(x, na.rm = FALSE))) %>%
+  mutate(has_both = !is.na(people_viral_positive) & !is.na(people_viral_total)) %>%
+  select(biweek, people_viral_positive, people_viral_total, state, has_both)  %>% 
+  distinct() %>%
+  ungroup()
+
+state_testing %>%
+  filter(has_both) %>%
+  filter(biweek >=6)
+
+
+states_keep <- state_testing %>%
+  mutate(has_both = people_viral_positive > 0 & people_viral_total >0) %>%
+  mutate(people_viral_total = ifelse(people_viral_total ==0, NA,  people_viral_total ),
+         people_viral_total = ifelse(people_viral_positive ==0, NA,  people_viral_total )) %>%
+  filter(has_both) %>%
+  group_by(state)%>%
+  summarize(n=n_distinct(biweek)) %>%
+  filter(n >20)
+
+state_testing %>%
+  filter(biweek <28) %>%
+  ggplot(aes(x=biweek, y = people_viral_positive/people_viral_total)) +
+  geom_line() +
+  facet_wrap(~state)
+
+
+state_testing <- state_testing %>%
+  group_by(state) %>%
+  arrange(state,biweek) %>%
+  mutate(pos_roll =slide_dbl(people_viral_positive, mean, .before=3, .after =2),
+         total_roll =slide_dbl(people_viral_total, mean, .before=3, .after =2) ) %>%
+  ungroup() %>%
+  mutate(people_viral_total = ifelse(people_viral_total < people_viral_positive,
+                                     total_roll,
+                                     people_viral_total),
+         people_viral_positive = ifelse(people_viral_total < people_viral_positive,
+                                     pos_roll,
+                                     people_viral_positive))  %>%
+#  filter(people_viral_total < people_viral_positive) %>%
+  mutate(people_viral_total = ifelse(people_viral_total < people_viral_positive,
+                                     NA,
+                                     people_viral_total),
+         people_viral_positive = ifelse(people_viral_total < people_viral_positive,
+                                     NA,
+                                     people_viral_positive) ) %>%
+  select(state, positive = people_viral_positive, total = people_viral_total, biweek) %>%
+  mutate(posrate= positive/total) %>%
+  filter(!is.na(positive) & !is.na(total) & !is.na(posrate)) %>%
+  filter(state %in% states_keep$state) %>%
+  left_join(state_pop)
+
+state_all_biweeks <- state_testing %>% select(biweek, positive,state,population) %>%
+  pivot_wider(names_from = biweek, values_from=positive) %>%
+  pivot_longer(cols =3:ncol(.), values_to="positive", names_to="biweek") %>%
+  mutate(biweek=as.integer(biweek)) %>%
+  select(-positive)
+  
+state_testing <- state_testing %>%
+  right_join(state_all_biweeks) %>%
+  group_by(state) %>%
+  arrange(biweek) %>%
+  mutate(pos_roll =slide_dbl(positive, mean, na.rm=TRUE, .before=2, .after =2),
+         total_roll =slide_dbl(total, mean, na.rm = TRUE, .before=2, .after =2)) %>%
+  mutate(positive= ifelse(is.na(positive), pos_roll, positive),
+         total = ifelse(is.na(total), total_roll, total)) %>%
+  mutate(posrate=positive/total)
+
+state_testing %>%
+  filter(!state %in% c("MP", "AS", "GU", "PR", "VI", "MH")) %>%
+   saveRDS(paste0(here::here(), 
+                 "/data/state_level/tests_biweekly_all_states_JHU.RDS"))
+
+
+
+
+
+
+
+```
+
+
+
+# County-level Cases
+
+## Michigan 
+
+
+
+
+```{r michigan county, eval=TRUE}
+
+county_fips <- read_tsv(paste0(
+  here::here(),
+  "/data/demographic/county_fips.tsv")) %>%
+  dplyr::rename_with(.cols =everything(), tolower)
+
+
+
+
+###############################
+# MICHIGAN BIWEEKLY DATA
+###############################
+
+
+if(!file.exists(paste0(here::here(),
+                     "/data/county_level/mi/mi_county_original.RDS"))) {
+  link <- paste0("https://www.michigan.gov/coronavirus/-/media/Project/Websites/coronavirus/",
+                 "Michigan-Data/09-27-2022/Datasets/Diagnostic-Tests-by-Result-and-County-2022-09-27.xlsx?",
+                 "rev=7ba61151dcff4b038e33ea9ead95137c&hash=6C1AA97E93A30A3C1F10171233FDF31A")
+  httr::GET(link, httr::write_disk(tf <- tempfile(fileext = ".xlsx")))
+  df <- readxl::read_excel(tf)
+  saveRDS(df, file = paste0(
+    here::here(),
+    "/data/county_level/mi/mi_county_original.RDS"))
+}
+  
+  
+counts_raw <- readRDS(paste0(
+  here::here(),
+  "/data/county_level/mi/mi_county_original.RDS"))
+
+# basic reformatting; join fips code and population
+counts_raw <- counts_raw %>%
+  mutate(week = week(MessageDate),
+         date = ymd(MessageDate)) %>%
+  dplyr::rename_with(.cols =everything(), tolower) %>%
+  mutate(state = "MI") %>%
+  left_join(county_fips,
+            by = c("county"="name",
+                   "state" = "state")) %>%
+  select(-messagedate) %>%
+  left_join(population_2019, by = c("fips" = "fips_code"))
+
+counts_raw %>%
+  saveRDS(., file =  paste0(
+    here::here(),
+  "/data/county_level/mi/mi_county_daily.RDS"))
+
+
+county <- counts_raw %>% 
+  mutate(
+    week = week(date),
+    year = year(date)) %>%
+  filter(year > 2020 & date <= end_date) %>%
+  mutate( week = case_when(
+    year == 2021 ~ week,
+    year == 2022 ~ week + 52)) %>%
+  select(fips, county, positive, 
+         date, total, week, 
+         negative, population) %>%
+  mutate(state = "MI")
+  
+
+
+######################
+# ADD BIWEEK
+######################
+num_weeks <- unique(county$week) %>%
+  length()
+
+num_biweeks <- num_weeks/2
+
+biweek <- tibble(biweek = c(rep(1:num_biweeks, 2))) %>%
+  arrange(biweek)
+
+biweek_to_week <- county %>%
+  select(week) %>%
+  distinct() %>%
+  arrange(week) %>%
+  cbind(biweek =biweek)
+
+county_biweekly <- county %>%
+  left_join(biweek_to_week) %>%
+  group_by(biweek, fips)  %>%
+  mutate(across(c(total,positive, negative),
+                 sum)) %>%
+  ungroup() %>%
+  mutate(posrate = positive/ total) %>%
+  select(-week) %>%
+  filter(!is.na(fips))
+
+
+county_biweekly %>%
+  select(biweek,date) %>%
+    distinct() %>%
+  saveRDS(paste0(here::here(),
+                 "/data/date_to_biweek.RDS"))
+
+county_biweekly %>%
+  select(-date) %>%
+  distinct() %>%
+  saveRDS(paste0(here::here(), 
+               "/data/county_level/mi/mi_county_biweekly.RDS"))
+
+
+
+```
+
+
+
+## Massachusetts
+
+Obtain data from the webpage [here](https://www.mass.gov/info-details/archive-of-covid-19-cases-in-massachusetts). A downloaded version of this webpage and data downloaded from a link it contains (downloaded Feb 18, 2023) is included in this repository.
+
+```{r,eval=TRUE}
+
+
+county_fips <- read_tsv(paste0(
+  here::here(),
+  "/data/demographic/county_fips.tsv")) %>%
+  dplyr::rename_with(.cols =everything(), tolower)
+
+
+url_2019 <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
+population_2019 <- read_csv(url_2019) %>%
+  mutate(fips_code = paste0(STATE, COUNTY)) %>%
+  select(fips_code, 
+         population = POPESTIMATE2019,
+         county_name = CTYNAME)
+
+
+```
+
+```{r,eval=TRUE}
+
+
+mass_html_page <- paste0(
+  here::here(),
+  "/data/county_level/ma/archived_webpage_mass_cases.html")
+
+# SCRAPE LINKS FROM HTML
+all_links <- tibble(lines = c(readLines(mass_html_page))) %>%
+  filter(grepl("/doc/covid-19-raw-data-", lines)) %>%
+  # extract the part in quotes
+  mutate(lines = str_extract(lines, '".*."'))%>%
+  # remove double quotes
+  mutate(lines = gsub('"', "", lines)) %>%
+  # remove any text before the www.mass.gov part of the link
+  mutate(lines = gsub(".*www.mass.gov", "", lines)) %>%
+  mutate(link = paste0("https://www.mass.gov", lines)) %>% 
+  pull(link)
+
+
+  
+read_data <- function(link) {
+  httr::GET(link, httr::write_disk(tf <- tempfile(fileext = ".xlsx")))
+  df <- readxl::read_excel(tf, sheet = "County_Weekly")
+  
+  df %>% 
+    select(contains("date"), 
+           total = `Total Tests (Last 14 days)`,
+           positive = `Total Positive Tests (Last 14 days)`,
+           county_name =County) %>%
+    mutate( negative = total - positive,
+            state = "MA") 
+
+}
+
+# take the most recent; will filter to only include needed dates
+file_link <- all_links[1]
+
+if(!file.exists(paste0(
+    here::here(),
+    "/data/county_level/ma/ma_county_original.RDS"))) {
+  
+  ma_data <- read_data(file_link)
+  ma_data %>%
+  saveRDS(paste0(
+    here::here(),
+    "/data/county_level/ma/ma_county_original.RDS"))
+
+  
+}
+
+
+```
+
+
+
+```{r,eval=TRUE}
+
+data_ma <- readRDS(
+  paste0(
+    here::here(),
+    "/data/county_level/ma/ma_county_original.RDS"))
+
+# Dukes and Nantucket counties are combined
+data_ma$county_name %>% unique()
+
+# only NAs are from counties that were combined
+data_ma %>%
+  filter(is.na(total) | is.na(positive)) %>%
+  pull(county_name) %>%
+  unique()
+
+data_ma <- data_ma %>%
+  filter(!(is.na(total) | is.na(positive)))
+
+together <- county_fips %>% 
+  filter(name == "Dukes" | name == "Nantucket") %>%
+  pull(fips) %>%
+  paste0(collapse = ",")
+
+##################################################################
+# add Dukes and Nantucket county populations 
+# since their test numbers are combined
+##################################################################
+grouped_counties_fips <- county_fips %>% 
+  filter(name == "Dukes" | name == "Nantucket") %>%
+  pull(fips)
+
+county_fips <- county_fips %>%
+  filter(!(fips %in% grouped_counties_fips)) %>%
+  bind_rows(tibble(name = "Dukes and Nantucket", 
+                   fips = paste0(grouped_counties_fips, 
+                                 collapse=","),
+                   state = "MA"))
+
+ 
+# sum populations for grouped counties
+population_2019 <- population_2019 %>%
+  mutate(fips_code = ifelse(fips_code %in% grouped_counties_fips,
+                            paste0(grouped_counties_fips, 
+                                 collapse=","), 
+                            fips_code)) %>%
+  group_by(fips_code) %>%
+  summarize(population = sum(population))
+
+
+```
+
+```{r, eval =TRUE}
+
+
+data_ma <- data_ma %>%
+  rename(report_date = `Report Date`,
+         start_period_date = `Start Date`,
+         end_period_date = `End Date`)%>%
+  filter(!county_name %in% c("All of Massachusetts", 
+                             "Unknown County")) %>%
+  mutate(year = year(start_period_date),
+         week = week(start_period_date)) %>%
+  filter(year> 2020 & start_period_date <= end_date) %>%
+  mutate( week = case_when(
+    year == 2021 ~ week,
+    year == 2022 ~ week + 52)) %>%
+  mutate(across(contains("date"),ymd))
+
+
+# add fips 
+data_ma <- data_ma %>%
+  mutate(county_name = gsub(" County", "", county_name),
+         county_name = gsub(" Counties", "", county_name),
+         county_name = trimws(county_name)) %>%
+  left_join(county_fips, 
+            by = c("state"="state", "county_name"="name"))
+
+# note that dates are overlapping, so remove the duplicates
+# so that we have non-overlapping two-week intervals
+data_ma %>% 
+  select(start_period_date, end_period_date, week) %>% 
+  distinct() %>% 
+  head(n = 30)
+
+
+# note that dates are overlapping, so remove the duplicates
+startdate_to_biweek <- data_ma %>%
+  filter(!week %% 2 ==0) %>%
+  select(-week) %>%
+  select(start_period_date) %>%
+  distinct() %>%
+  arrange(start_period_date) %>%
+  mutate(biweek = row_number())
+
+# note that summing by biweek is not needed because structure is already in 
+# 2 week interval format
+data_ma  <- data_ma %>%
+  filter(!week %% 2 ==0) %>%
+  left_join(startdate_to_biweek) %>%
+  select(-c(week, end_period_date,report_date)) %>%
+  left_join(population_2019, by = c("fips" = "fips_code")) %>%
+  rename(date = start_period_date) %>%
+  mutate(posrate = positive/total) 
+  
+  
+data_ma %>%
+  saveRDS(
+    paste0(here::here(),
+           "/data/county_level/ma/ma_county_biweekly.RDS"))
+  
+  
+```
+
+
+# Hospitalizations 
+
+## State-level Hospitalizations
+
+Hospitalization data from the healthdata.gov endpoint [here](https://dev.socrata.com/foundry/healthdata.gov/g62h-syeh).
+
+```{r,eval=TRUE}
+
+
+##### WEEKLY
+# https://dev.socrata.com/foundry/healthdata.gov/g62h-syeh
+hosp <- httr::GET(URLencode(
+  paste0("https://healthdata.gov/resource/g62h-syeh.json?",
+  "$where=date between '2020-12-31T12:00:00' and '2022-02-25T14:00:00'&$",
+  "select=deaths_covid,date,percent_of_inpatients_with_covid,",
+  "inpatient_beds_used_covid,inpatient_beds_used,state&$limit=50000")))
+
+hosp <-jsonlite::fromJSON(
+  httr::content(hosp,
+                as="text",
+                encoding = "UTF-8")) %>%
+  as_tibble()
+
+hosp <- hosp %>%
+  # reformat dates from 2021-01-01T00:00:00.000 format
+  # to date foramt
+  mutate(date = gsub("T.*", "",date),
+         date = as.Date(date, format = "%Y-%m-%d"),
+         week = week(date)) %>%
+  mutate(across(-c(date,state), as.numeric))
+
+hosp <- hosp %>%
+  mutate(
+    year = year(date)) %>%
+  mutate(across(-c(date,state), as.numeric)) %>%
+  mutate(week = case_when(
+    year == 2021 ~ week,
+    year == 2022 ~ week + 52
+  ))
+
+
+num_weeks <- unique(hosp$week) %>%
+  length()
+
+num_biweeks <- num_weeks/2
+
+biweek <- tibble(biweek = c(rep(1:num_biweeks, 2))) %>%
+  arrange(biweek)
+
+biweek_to_week <- hosp %>%
+  select(week) %>%
+  distinct() %>%
+  arrange(week) %>%
+  cbind(biweek =biweek)
+  
+####################################
+#save biweekly hospitalizations
+####################################
+hosp_biweekly <- hosp %>%
+  left_join(biweek_to_week) %>%
+  group_by(biweek, state) %>%
+  mutate(across(c(deaths_covid, 
+                  inpatient_beds_used_covid,
+                  inpatient_beds_used),
+                sum)) 
+
+hosp_biweekly %>%
+  head(n= 30)
+
+hosp_biweekly %>%
+  saveRDS(paste0(here::here(),
+                 "/data/state_level/hosp_biweekly_all_states.RDS"))
+  
+
+```
+
+
+
+
+## County-level Hospitalizations
+
+Hospitalization data is from the Covidestim data sources repository [here](https://github.com/covidestim/covidestim-sources); details available under the *Hospitalization data pipeline section* of their Readme. Briefly, they use HHS facility-level hospitalization data and using geographic information to aggregate by county. 
+
+Values between 1 and 3 are censored, so the Covidestim developers included two estimates to bound the possible values:
+
+* `admissionsAdultsConfirmed_min`: The smallest the outcome could be - all censored values, which each represent a possible range of 1-3, will be resolved to 1.
+* `admissionsAdultsConfirmed_max:`  censored values taken to be 3
+
+
+```{r, eval = TRUE}
+
+dates <- readRDS(paste0(here::here(),
+                 "/data/date_to_biweek.RDS"))
+
+county_hosp <- readRDS(paste0(
+    here::here(),
+    "/data/county_level/hosp/hhs-hospitalizations-by-county.RDS")) %>%
+  filter(year(weekstart) >= 2021 & weekstart <= end_date)
+
+county_hosp %>% head()
+
+# sum by biweek
+county_hosp <- county_hosp %>%
+  select(fips,
+         weekstart,
+         admissionsAdultsConfirmed_max,
+         admissionsAdultsConfirmed_min) %>%
+  left_join(dates, by = c("weekstart"="date")) %>%
+  rename(date=weekstart)%>%
+  group_by(fips,biweek) %>%
+  summarize(across(contains("admissions"), sum),
+            date = min(date)) %>%
+  ungroup()
+
+county_hosp %>% head()
+
+county_hosp %>%
+  saveRDS(paste0(
+    here::here(),
+    "/data/county_level/hosp/hosp_biweekly_all_counties.RDS"))
+
+
+
+```
+
+
+# COVID-19 Trends and Impact Survey Data
+
+Accessed through the [Covidcast API](https://cmu-delphi.github.io/delphi-epidata/api/covidcast-signals/fb-survey.html).
+
+From the documentation:
+
+* `smoothed_wtested_positive_14d`: positivity rate among those tested for COVID-19 in previous 14 days
+* `smoothed_wscreening_tested_positive_14d`: positivity rate among those screened for COVID-19 without symptoms or known exposure
+
+
+```{r, eval=TRUE}
+
+
+screening_data_link <- paste0(
+  "https://api.covidcast.cmu.edu/epidata/covidcast/?data_source=fb-survey",
+  "&signal=smoothed_wscreening_tested_positive_14d,smoothed_wtested_positive_14d,smoothed_wcli",
+  "&geo_type=state&time_type=day&time_values=20210320-20221212&geo_value=*")
+
+fb_screening <- httr::GET(screening_data_link)
+
+fb_symptoms <-jsonlite::fromJSON(
+      httr::content(fb_screening,
+                    as = "text", 
+                    encoding = "UTF-8"))$epidata %>%
+   mutate(date = lubridate::ymd(time_value),
+          week = lubridate::week(date),
+          state = geo_value,
+          value = value/100,
+          stderr = stderr/100) %>% 
+  filter(date <= lubridate::ymd("2022-03-01")) %>%
+  as_tibble()
+
+
+fb_symptoms %>%
+  saveRDS(paste0(
+    here::here(), 
+    "/data/state_level/screeningpos_all_states.RDS"))
+
+
+
+```
+
+# Biobot Wastewater Data
+
+
+```{r}
+
+biobot_link <- "https://raw.githubusercontent.com/biobotanalytics/covid19-wastewater-data/master/wastewater_by_county.csv"
+
+dates <- readRDS(here("data", "date_to_biweek.RDS"))
+
+w_data <- read_csv(biobot_link)%>% 
+  filter(sampling_week >= ymd("2021-03-01") &  sampling_week <= ymd("2022-03-01")) %>%
+  mutate(fips = as.character(fipscode)) %>%
+  select(-fipscode)  %>%
+  left_join(dates, by = c("sampling_week" = "date")) %>%
+  group_by(fips, biweek, state,name) %>%
+  summarize(mean_conc = mean(effective_concentration_rolling_average, na.rm= TRUE)) %>%
+  ungroup()
+
+
+saveRDS(w_data,
+        here("data/county_level", "biobot_wastewater_county.RDS"))
+
+
+
+```
+
