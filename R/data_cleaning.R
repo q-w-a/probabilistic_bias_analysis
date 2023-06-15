@@ -25,19 +25,16 @@ population_2019 <- read_csv(url_2019) %>%
 # source than the latest runs endpoint of the API.
 
 
-get_covidestim_biweekly <- function() {
+get_covidestim_state_biweekly <- function(end_date = "2022-02-25") {
   
-  # set end date
-  end_date <- ymd("2022-02-25")
-  
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+  # access dates AFTER 2021-12-02
+  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   
   covidestim_api_link <- "https://api2.covidestim.org/latest_runs?geo_type=eq.state&select=*,timeseries(*)"
   covidestim <- GET(covidestim_api_link)
   
   
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # access dates BEFORE 2021-12-02
-  #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   last_weeks <-jsonlite::fromJSON(
     httr::content(covidestim,
                   as = "text",
@@ -73,7 +70,7 @@ get_covidestim_biweekly <- function() {
     ungroup()
   
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-  # access dates AFTER 2021-12-02
+  # access dates BEFORE 2021-12-02
   #~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
   covidestim_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv"
   
@@ -137,11 +134,101 @@ get_covidestim_biweekly <- function() {
   
 }
 
-# covidestim <- get_covidestim_biweekly()
-# saveRDS(here("data/data_clean/covidestim_biweekly_all_states.RDS"))
 
 
 
 
 
 
+
+
+
+#------- Covidestim (County Level) -----
+
+get_covidestim_county_biweekly <- function(end_date = "2022-02-25") {
+  legacy_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/estimates.csv"
+  
+  covidestim_county <- read_csv(legacy_link) %>%
+    select(fips, date, infections)
+  
+  
+  covidestim_county <- covidestim_county %>%
+    filter(date <= end_date &  year(date) > 2020) %>%
+    mutate(week = week(date),
+           year = year(date)) %>%
+    mutate(week = case_when(
+      year == 2022 ~ week + 52,
+      year == 2021 ~ week
+    ))
+  
+  
+  num_weeks <- covidestim_county %>% 
+    pull(week) %>% 
+    unique() %>% 
+    length()
+  
+  num_biweeks <- num_weeks/2
+  
+  biweek <- tibble(biweek = c(rep(1:num_biweeks, 2))) %>%
+    arrange(biweek)
+  
+  biweek_to_week <- covidestim_county %>%
+    select(week) %>%
+    distinct() %>%
+    arrange(week) %>%
+    cbind(biweek =biweek)
+  
+  
+  covidestim_biweekly_all_counties <- covidestim_county %>%
+    left_join(biweek_to_week) %>%
+    group_by(biweek, fips)  %>%
+    mutate(across(contains("infections"), sum)) %>%
+    ungroup() 
+}
+
+
+
+
+
+#--------- Archive Data -----------
+
+archive_data <- function() {
+  
+  # save county estimates
+  legacy_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/estimates.csv"
+  
+  estimates_legacy <- read_csv(legacy_link) 
+  
+  estimates_legacy <- estimates_legacy %>%
+    select(fips, date, infections) %>%
+    filter(year(date) >= 2020 & 
+             substr(fips,1,2) %in% c("25", "26")) 
+  
+  saveRDS(
+    estimates_legacy,
+    here("data/data_raw/covidestim_county_estimates.RDS"))
+  
+  
+  # save state estimates
+  
+  # access dates AFTER 2021-12-02
+  covidestim_api_link <- "https://api2.covidestim.org/latest_runs?geo_type=eq.state&select=*,timeseries(*)"
+  covidestim <- GET(covidestim_api_link)
+  
+  saveRDS(
+    covidestim,
+    here("data/data_raw/covidestim_state_2021_to_2022.RDS"))
+  
+  
+  # access dates BEFORE 2021-12-02
+  covidestim_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv"
+  covidestim_allstates <- read_csv(covidestim_link) %>%
+    filter(year(date) == 2021)
+  
+  saveRDS(
+    covidestim_allstates,
+    here("data/data_raw/covidestim_state_2021.RDS"))
+  
+}
+
+# archive_data()
