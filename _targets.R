@@ -28,9 +28,15 @@ tar_source("R/data_cleaning.R")
 
 # Replace the target list below with your own:
 list(
+  #---------------- data -------------------
+  # state-level covidestim
   tar_target(
     name = covidestim_biweekly_state,
-    command = get_covidestim_biweekly(),
+    command = get_covidestim_state_biweekly(),
+    format = "rds"),
+  # county-level covidestim
+  tar_target(
+    name = covidestim_biweekly_county,
+    command = get_covidestim_county_biweekly(),
     format = "rds")
-  
 )
