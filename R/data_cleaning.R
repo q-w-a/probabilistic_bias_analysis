@@ -5,15 +5,15 @@ library(httr)
 
 #------------------ State Level Cleaning -----------------
 
-data_path <- here("data_clean")
+# data_path <- here("data/data_clean")
 
 #------Census Population Estimates -----
 
-url_2019 <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
-
-population_2019 <- read_csv(url_2019) %>%
-  mutate(fips_code = paste0(STATE, COUNTY)) %>%
-  select(fips_code, population =POPESTIMATE2019)
+# url_2019 <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
+# 
+# population_2019 <- read_csv(url_2019) %>%
+#   mutate(fips_code = paste0(STATE, COUNTY)) %>%
+#   select(fips_code, population =POPESTIMATE2019)
 
 
 
@@ -320,3 +320,6 @@ get_state_testing <- function() {
 
 
 } 
+
+
+
