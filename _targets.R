@@ -38,5 +38,9 @@ list(
   tar_target(
     name = covidestim_biweekly_county,
     command = get_covidestim_county_biweekly(),
+    format = "rds"),
+  tar_target(
+    name = tests_biweekly_state,
+    command = get_state_testing(),
     format = "rds")
 )

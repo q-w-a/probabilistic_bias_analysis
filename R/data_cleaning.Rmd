@@ -78,7 +78,6 @@ library(lubridate)
 
 data_path <- paste0(here::here(), "/data/")
 
-
 ########################################  
 #CENSUS DATA POPULATION ESTIMATES 
 ########################################  

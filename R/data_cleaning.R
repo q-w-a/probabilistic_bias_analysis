@@ -232,3 +232,83 @@ archive_data <- function() {
 }
 
 # archive_data()
+
+
+#----------- State-Level Testing -------
+
+get_state_testing <- function() {
+
+    
+  dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
+  
+  
+  # PAGE: https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/state/detail/
+  state_population_link <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/state/detail/SCPRC-EST2019-18+POP-RES.csv"
+  state_pop <- read_csv(state_population_link)
+  
+  
+  
+  statecodes <- read_csv(paste0(
+    here::here(), 
+    "/data/demographic/statecodes.csv"))
+  
+  state_pop <- state_pop %>%
+    left_join(statecodes, by = c("NAME" = "state")) %>%
+    select(population = POPESTIMATE2019,
+           state = code) %>%
+    filter(!is.na(state))
+  
+  
+  
+  # split into two queries to ensure we obtain all data with the API limit
+  
+  dat <- httr::GET(URLencode(
+    paste0("https://healthdata.gov/resource/j8mb-icvb.json?",
+           "$where=date between '2020-12-30T12:00:00' and '2021-10-15T12:00:00'&$limit=50000")))
+  
+  cdc1 <-jsonlite::fromJSON(
+    httr::content(dat,
+                  as = "text", 
+                  encoding = "UTF-8")) %>%
+    as_tibble()
+  
+  
+  dat2 <- httr::GET(URLencode(
+    paste0("https://healthdata.gov/resource/j8mb-icvb.json?",
+           "$where=date between '2021-10-15T14:00:00' and '2022-02-25T14:00:00'&$limit=50000")))
+  
+  
+  cdc2 <-jsonlite::fromJSON(
+    httr::content(dat2,
+                  as = "text", 
+                  encoding = "UTF-8")) %>%
+    as_tibble()
+  
+  
+  cdc <- bind_rows(cdc1, cdc2) %>%
+    mutate(date = ymd(substr(date,1,10))) %>%
+    mutate(across(c(new_results_reported), as.numeric)) %>%
+    filter(!state %in% c("MP", "AS", "GU", "PR", "VI", "MH"))
+  
+  # overall_outcome is the outcome of the test (Inconclusive, Negative, or Positive)
+  # new_results_reported is the number with the given outcome
+  cdc_pos <- cdc %>%
+    select(-c(fema_region, total_results_reported)) %>%
+    pivot_wider(names_from = c("overall_outcome"),
+                values_from = c("new_results_reported")) %>%
+    mutate(total = Inconclusive + Negative + Positive) %>%
+    rename_with(tolower) %>%
+    select(state, positive, total, date)
+  
+  cdc_pos %>%
+    left_join(dates) %>%
+    filter(!is.na(biweek)) %>%
+    group_by(biweek, state) %>%
+    mutate(positive = sum(positive, na.rm=TRUE),
+           total = sum(total, na.rm = TRUE)) %>%
+    ungroup() %>%
+    mutate(posrate = positive/total) %>%
+    left_join(state_pop) 
+
+
+} 
