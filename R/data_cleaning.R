@@ -128,7 +128,8 @@ get_covidestim_state_biweekly <- function(end_date = "2022-02-25") {
   
   covidestim_biweekly <- covidestim_biweekly %>%
     rename(state_name = state) %>%
-    left_join(statecodes)
+    left_join(statecodes) %>%
+    select(-week)
   
   return(covidestim_biweekly)
   
@@ -183,7 +184,11 @@ get_covidestim_county_biweekly <- function(end_date = "2022-02-25") {
     left_join(biweek_to_week) %>%
     group_by(biweek, fips)  %>%
     mutate(across(contains("infections"), sum)) %>%
-    ungroup() 
+    ungroup() %>%
+    select(-week)
+  
+  return(covidestim_biweekly_all_counties)
+  
 }
 
 
@@ -300,7 +305,7 @@ get_state_testing <- function() {
     rename_with(tolower) %>%
     select(state, positive, total, date)
   
-  cdc_pos %>%
+  cdc_pos <- cdc_pos %>%
     left_join(dates) %>%
     filter(!is.na(biweek)) %>%
     group_by(biweek, state) %>%
@@ -309,6 +314,9 @@ get_state_testing <- function() {
     ungroup() %>%
     mutate(posrate = positive/total) %>%
     left_join(state_pop) 
+  
+  
+  return(cdc_pos)
 
 
 } 
