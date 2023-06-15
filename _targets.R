@@ -39,13 +39,19 @@ list(
     name = covidestim_biweekly_county,
     command = get_covidestim_county_biweekly(),
     format = "rds"),
-  # state-level positive tests
+  # state-level testing data
   tar_target(
     name = tests_biweekly_state,
     command = get_state_testing(),
     format = "rds"),
+  # county-level testing data
   tar_target(
     name = mi_biweekly_county,
     command = get_michigan_county(),
+    format = "rds"),
+  tar_target(
+    name = ma_biweekly_county,
+    command = get_mass_county(),
     format = "rds")
+
 )

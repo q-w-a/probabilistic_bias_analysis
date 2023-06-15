@@ -332,12 +332,28 @@ get_state_testing <- function() {
 
 archive_county_data <- function() {
   
+  # Michigan
   link <- paste0("https://www.michigan.gov/coronavirus/-/media/Project/Websites/coronavirus/",
                  "Michigan-Data/09-27-2022/Datasets/Diagnostic-Tests-by-Result-and-County-2022-09-27.xlsx?",
                  "rev=7ba61151dcff4b038e33ea9ead95137c&hash=6C1AA97E93A30A3C1F10171233FDF31A")
   httr::GET(link, httr::write_disk(tf <- tempfile(fileext = ".xlsx")))
   df <- readxl::read_excel(tf)
   saveRDS(df, file =here("data/data_raw/mi_county_original.RDS"))
+  
+  
+  # Massachusetts
+  mass_link <- "https://www.mass.gov/doc/covid-19-raw-data-april-12-2022/download"
+  httr::GET(mass_link, httr::write_disk(tf <- tempfile(fileext = ".xlsx")))
+  
+  df <- readxl::read_excel(tf, sheet = "County_Weekly")
+  df <- df %>% 
+    select(contains("date"), 
+           total = `Total Tests (Last 14 days)`,
+           positive = `Total Positive Tests (Last 14 days)`,
+           county_name =County) %>%
+    mutate( negative = total - positive,
+            state = "MA") 
+  saveRDS(df, file =here("data/data_raw/ma_county_original.RDS"))
   
 }
 
@@ -415,4 +431,105 @@ get_michigan_county <- function(end_date = "2022-02-25") {
   return(county_biweekly) 
   
 }
+
+#---------- Massachusetts County Data -----------
+
+
+get_mass_county <- function(end_date = "2022-02-25") {
+  
+  county <- readRDS(here("data/data_raw/ma_county_original.RDS"))
+  
+  county_fips <- read_tsv(here("data/demographic/county_fips.tsv")) %>%
+    dplyr::rename_with(.cols =everything(), tolower)
+  
+  population_2019 <- get_county_pop()
+  
+  # Dukes and Nantucket are combined
+  together <- county_fips %>% 
+    filter(name == "Dukes" | name == "Nantucket") %>%
+    pull(fips)
+  
+  county_fips <- county_fips %>%
+    filter(!(fips %in% together)) %>%
+    bind_rows(tibble(name = "Dukes and Nantucket", 
+                     fips = paste0(together, 
+                                   collapse=","),
+                     state = "MA"))
+  
+  
+  
+  county <- county %>%
+    filter(!(is.na(total) | is.na(positive))) %>%
+    filter(!county_name %in% c("All of Massachusetts", 
+                                        "Unknown County")) %>%
+    rename(
+           start_period_date = `Start Date`,
+           end_period_date = `End Date`) %>%
+    mutate(year = year(start_period_date),
+           week = week(start_period_date)) %>%
+    filter(year> 2020 & start_period_date <= end_date) %>%
+    mutate( week = case_when(
+      year == 2021 ~ week,
+      year == 2022 ~ week + 52)) %>%
+    mutate(across(contains("date"),ymd)) %>%
+    select(-c(`Report Date`))
+  
+  county <- county %>%
+    mutate(county_name = gsub(" County", "", county_name),
+           county_name = gsub(" Counties", "", county_name),
+           county_name = trimws(county_name)) %>%
+    left_join(county_fips, 
+              by = c("state"="state", "county_name"="name"))
+  
+  
+  
+  # note that dates are overlapping, so remove the duplicates
+  startdate_to_biweek <- county %>%
+    filter(!week %% 2 ==0) %>%
+    select(-week) %>%
+    select(start_period_date) %>%
+    distinct() %>%
+    arrange(start_period_date) %>%
+    mutate(biweek = row_number())
+  
+  
+  
+  
+  # sum populations for grouped counties
+  population_2019 <- population_2019 %>%
+    mutate(fips_code = ifelse(fips_code %in% together,
+                              paste0(together, 
+                                     collapse=","), 
+                              fips_code)) %>%
+    group_by(fips_code) %>%
+    summarize(population = sum(population))
+  
+  
+  # note that summing by biweek is not needed because structure is already in 
+  # 2 week interval format
+  county  <- county %>%
+    filter(!week %% 2 ==0) %>%
+    left_join(startdate_to_biweek) %>%
+    select(-c(week, end_period_date)) %>%
+    left_join(population_2019, by = c("fips" = "fips_code")) %>%
+    rename(date = start_period_date) %>%
+    mutate(posrate = positive/total) 
+  
+  
+  return(county)
+  
+
+  
+}
+
+
+
+
+
+
+
+
+
+
+
 
