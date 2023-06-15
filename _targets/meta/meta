@@ -1,12 +1,17 @@
 name|type|data|command|depend|seed|path|time|size|bytes|format|repository|iteration|parent|children|seconds|warnings|error
+archive_county_data|function|0a9d990e3d93bf5b|||||||||||||||
+archive_covidestim_data|function|a95bc3c1e70ef0fc|||||||||||||||
 archive_data|function|a95bc3c1e70ef0fc|||||||||||||||
 covidestim_biweekly_county|stem|6881e4ba9293f6d2|c3987d1ca65c2726|636961ff9960c913|1925259000||t19523.6529528455s|4bce6978b5527fd5|986663|rds|local|vector|||40.02||
 covidestim_biweekly_state|stem|ea9c0ebf4dd3e3a6|a94e2a127498634e|e667b4420e9f4e45|-1428750791||t19523.6530982415s|53a24bb08d634cad|38467|rds|local|vector|||6.207||
 data_path|object|fa55dd65e1ddae16|||||||||||||||
+get_county_pop|function|5ba368814fa2682d|||||||||||||||
 get_covidestim_biweekly|function|bc029be2fd03d3e7|||||||||||||||
 get_covidestim_county_biweekly|function|e56a514074048630|||||||||||||||
 get_covidestim_state_biweekly|function|7b1b436f9bb8c7d7|||||||||||||||
+get_michigan_county|function|479fcc8dc8689467|||||||||||||||
 get_state_testing|function|a9a59f6c74dad908|||||||||||||||
+mi_biweekly_county|stem|82041c40409a4661|fe7918a56eafd4e4|a5d330c7fb5c9e77|-1031805087||t19523.7161506056s|64583734387ba5dc|40638|rds|local|vector|||2.864||
 population_2019|object|b9e26069e693c38f|||||||||||||||
 tests_biweekly_state|stem|c7c6ae0f262b12af|2f241e580a396879|ce4554d82c5378b6|1602525337||t19523.6530260569s|37ba32ca85c8775d|33295|rds|local|vector|||6.269||
 url_2019|object|7b3507b3139e4a32|||||||||||||||

@@ -9,11 +9,16 @@ library(httr)
 
 #------Census Population Estimates -----
 
-# url_2019 <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
-# 
-# population_2019 <- read_csv(url_2019) %>%
-#   mutate(fips_code = paste0(STATE, COUNTY)) %>%
-#   select(fips_code, population =POPESTIMATE2019)
+
+get_county_pop <- function() {
+  url_2019 <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/counties/totals/co-est2019-alldata.csv"
+  
+  population_2019 <- read_csv(url_2019) %>%
+    mutate(fips_code = paste0(STATE, COUNTY)) %>%
+    select(fips_code, population =POPESTIMATE2019)
+  
+  return(population_2019)
+}
 
 
 
@@ -195,9 +200,9 @@ get_covidestim_county_biweekly <- function(end_date = "2022-02-25") {
 
 
 
-#--------- Archive Data -----------
+#--------- Archive Covidestim Data -----------
 
-archive_data <- function() {
+archive_covidestim_data <- function() {
   
   # save county estimates
   legacy_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/estimates.csv"
@@ -322,4 +327,92 @@ get_state_testing <- function() {
 } 
 
 
+#--------- Archive County Data -----------
+
+
+archive_county_data <- function() {
+  
+  link <- paste0("https://www.michigan.gov/coronavirus/-/media/Project/Websites/coronavirus/",
+                 "Michigan-Data/09-27-2022/Datasets/Diagnostic-Tests-by-Result-and-County-2022-09-27.xlsx?",
+                 "rev=7ba61151dcff4b038e33ea9ead95137c&hash=6C1AA97E93A30A3C1F10171233FDF31A")
+  httr::GET(link, httr::write_disk(tf <- tempfile(fileext = ".xlsx")))
+  df <- readxl::read_excel(tf)
+  saveRDS(df, file =here("data/data_raw/mi_county_original.RDS"))
+  
+}
+
+
+# archive_county_data()
+
+
+#--------- Michigan County Data -----------
+
+
+get_michigan_county <- function(end_date = "2022-02-25") {
+  
+  counts_raw <- readRDS(here(
+    "data/data_raw/mi_county_original.RDS"))
+  county_fips <- read_tsv(here("data/demographic/county_fips.tsv")) %>%
+    dplyr::rename_with(.cols =everything(), tolower)
+  population_2019 <- get_county_pop()
+  
+  # basic reformatting; join fips code and population
+  counts_raw <- counts_raw %>%
+    mutate(week = week(MessageDate),
+           date = ymd(MessageDate)) %>%
+    dplyr::rename_with(.cols =everything(), tolower) %>%
+    mutate(state = "MI") %>%
+    left_join(county_fips,
+              by = c("county"="name",
+                     "state" = "state")) %>%
+    select(-messagedate) %>%
+    left_join(population_2019, by = c("fips" = "fips_code"))
+  
+  county <- counts_raw %>% 
+    mutate(
+      week = week(date),
+      year = year(date)) %>%
+    filter(year > 2020 & date <= end_date) %>%
+    mutate( week = case_when(
+      year == 2021 ~ week,
+      year == 2022 ~ week + 52)) %>%
+    select(fips, county, positive, 
+           date, total, week, 
+           negative, population) %>%
+    mutate(state = "MI")
+  
+  # add biweek
+  num_weeks <- unique(county$week) %>%
+    length()
+  
+  num_biweeks <- num_weeks/2
+  
+  biweek <- tibble(biweek = c(rep(1:num_biweeks, 2))) %>%
+    arrange(biweek)
+  
+  biweek_to_week <- county %>%
+    select(week) %>%
+    distinct() %>%
+    arrange(week) %>%
+    cbind(biweek =biweek)
+  
+  county_biweekly <- county %>%
+    left_join(biweek_to_week) %>%
+    group_by(biweek, fips)  %>%
+    mutate(across(c(total,positive, negative),
+                  sum)) %>%
+    ungroup() %>%
+    mutate(posrate = positive/ total) %>%
+    select(-week) %>%
+    filter(!is.na(fips))
+  
+  
+  
+  county_biweekly <- county_biweekly %>%
+    select(-date) %>%
+    distinct()
+  
+  return(county_biweekly) 
+  
+}
 

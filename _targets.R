@@ -43,5 +43,9 @@ list(
   tar_target(
     name = tests_biweekly_state,
     command = get_state_testing(),
+    format = "rds"),
+  tar_target(
+    name = mi_biweekly_county,
+    command = get_michigan_county(),
     format = "rds")
 )
