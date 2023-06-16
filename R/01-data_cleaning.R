@@ -526,8 +526,37 @@ get_mass_county <- function(end_date = "2022-02-25") {
 
 
 
+#---------- COVID-19 Trends and Impact Survey Data --------------
 
+save_survey_data <- function() {
+  
+  screening_data_link <- paste0(
+    "https://api.covidcast.cmu.edu/epidata/covidcast/?data_source=fb-survey",
+    "&signal=smoothed_wscreening_tested_positive_14d,smoothed_wtested_positive_14d,smoothed_wcli",
+    "&geo_type=state&time_type=day&time_values=20210320-20221212&geo_value=*&api_key=TEMP-API-KEY-EXPIRES-2023-06-28")
+  
+  fb_screening <- httr::GET(screening_data_link)
+  
+  fb_symptoms <-jsonlite::fromJSON(
+    httr::content(fb_screening,
+                  as = "text", 
+                  encoding = "UTF-8"))$epidata %>%
+    mutate(date = lubridate::ymd(time_value),
+           week = lubridate::week(date),
+           state = geo_value,
+           value = value/100,
+           stderr = stderr/100) %>% 
+    filter(date <= lubridate::ymd("2022-03-01")) %>%
+    as_tibble()
+  
+  
+  fb_symptoms %>%
+    saveRDS(here(
+      "data/data_raw/ctis_all_states.RDS"))
+  
+}
 
+save_survey_data()
 
 
 
