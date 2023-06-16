@@ -21,6 +21,11 @@ options(clustermq.scheduler = "multicore")
 #tar_source("R/priors.R")
 tar_source("R/01-data_cleaning.R")
 tar_source("R/02-priors.R")
+tar_source("R/03-base-functions.R")
+tar_source("R/04-melding.R")
+tar_source("R/05-state-analysis.R")
+
+
 
 
 # source("other_functions.R") # Source other scripts as needed. # nolint
@@ -47,13 +52,19 @@ list(
   tar_target(
     name = ma_biweekly_county,
     command = get_mass_county()),
+  
   #---------------- analysis -------------------
   # set priors
   tar_target(
     name = prior_params,
     command= get_priors()
+  ),
+  tar_target(
+    name = state_v1,
+    command = get_v1_state(
+        data = tests_biweekly_state,
+        params = prior_params)
   )
-  
   
   
   

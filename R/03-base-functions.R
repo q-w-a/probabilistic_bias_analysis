@@ -193,8 +193,7 @@ process_priors_per_county <-  function(priors, county_df, nsamp){
       empirical_testpos = county_df$posrate,
       population = county_df$population,
       total = county_df$total,
-      positive = county_df$positive,
-      negative = county_df$negative) %>%
+      positive = county_df$positive) %>%
     mutate(Se = dist_Se,
            Sp = dist_Sp,
            biweek = county_df$biweek,
@@ -306,7 +305,6 @@ summarize_corrected_sample <- function(priors_by_county_df_exp_cases) {
     fips = unique(priors_by_county_df_exp_cases$fips),
     empirical_testpos = unique(priors_by_county_df_exp_cases$empirical_testpos),
     population = unique(priors_by_county_df_exp_cases$population),
-    negative = unique(priors_by_county_df_exp_cases$negative),
     positive = unique(priors_by_county_df_exp_cases$positive),
     total = unique(priors_by_county_df_exp_cases$total))
   

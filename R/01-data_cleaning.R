@@ -308,16 +308,18 @@ get_state_testing <- function() {
                 values_from = c("new_results_reported")) %>%
     mutate(total = Inconclusive + Negative + Positive) %>%
     rename_with(tolower) %>%
-    select(state, positive, total, date)
+    select(state, positive, total, negative, date)
   
   cdc_pos <- cdc_pos %>%
     left_join(dates) %>%
     filter(!is.na(biweek)) %>%
     group_by(biweek, state) %>%
     mutate(positive = sum(positive, na.rm=TRUE),
-           total = sum(total, na.rm = TRUE)) %>%
+           total = sum(total, na.rm = TRUE),
+           negative=sum(negative)) %>%
     ungroup() %>%
-    mutate(posrate = positive/total) %>%
+    mutate(posrate = positive/total,
+           negative = total) %>%
     left_join(state_pop) 
   
   
