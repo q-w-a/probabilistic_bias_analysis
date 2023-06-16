@@ -1,6 +1,6 @@
 # Probabalistic Bias Analysis to Approximate COVID-19 Infection Counts
 
-Applying probablistic bias analysis to approximate the true number of COVID-19 infections, at the state level in all states and at the county level in Massachusetts.
+Applying probabilistic bias analysis to approximate the true number of COVID-19 infections, at the state level in all states and at the county level in Massachusetts.
 
 
 ## Target Descriptions
@@ -12,12 +12,37 @@ Applying probablistic bias analysis to approximate the true number of COVID-19 i
 See the documentation [here](covidestim.org) for documentation on Covidestim. Targets for Covidestim data include:
 
 * `covidestim_biweekly_state`: Covidestim infection counts summed for each 2-week interval at the state level
-* `covidestim_biweekly_county`: Covidestim infection counts summed for each 2-week interval at the county level
+  - `infections`: median
+  - `infections.hi`: 97.5th percentile
+  - `infections.lo`: 2.5th percentile
+* `covidestim_biweekly_county`: Covidestim infection counts summed for each 2-week interval at the county level, only Massachusetts and Michigan
+  - `fips`: county FIPS code
+  - `infections`: median
 
 #### State-level Testing Data
 
 * `tests_biweekly_state`: PCR test results at the state-level from healthdata.gov endpoint [here](https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb)
-* Columns: `state`, `positive` (number of positive tests),   `total` (total number of tests), `date` (first date of 2-week interval), `biweek`, `posrate` (biweekly positivity rate, `positive`/`total`), `population` (census population)
+    * Columns: 
+      - `state`
+      - `positive` number of positive tests
+      - `total` total number of tests
+      - `date` first date of 2-week interval
+      - `biweek`
+      - `posrate` biweekly positivity rate, `positive`/`total`
+      - `population` census population size for state
+      
+#### County-level Testing Data
+
+* `mi_biweekly_county` and `ma_biweekly_county`
+  - Columns: 
+      -  `fips`: county FIPS code
+      - `county`: county name 
+      - `positive`: number of positive tests
+      - `negative`: number of negative tests
+      - `total`: number of total tests 
+      - `state`: 2-letter state abbreviation
+      - `biweek`: 2-week interval
+      - `posrate`: biweekly positivity rate
 
 
 
