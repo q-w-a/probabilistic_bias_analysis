@@ -16,7 +16,8 @@ get_melded <- function(alpha_mean = 0.9,
                        pre_nsamp = 1e4,
                        post_nsamp = 1e3,
                        include_corrected = TRUE,
-                       bde = FALSE) {
+                       bde = FALSE,
+                       quiet=FALSE) {
   
   
   given_args <- as.list(environment())

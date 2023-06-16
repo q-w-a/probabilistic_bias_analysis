@@ -9,7 +9,9 @@ library(targets)
 
 # Set target options:
 tar_option_set(
-  packages = c("tidyverse", "lubridate", "here", "httr"), # packages that your targets need to run
+  # packages needed for targets
+  packages = c("tidyverse", "lubridate", 
+               "here", "httr", "imputeTS"), 
   format = "rds" # default storage format
   # Set other options as needed.
 )
@@ -59,15 +61,19 @@ list(
     name = prior_params,
     command= get_priors()
   ),
+  # tar_target(
+  #   name = state_v1,
+  #   command = get_v1_state(
+  #       data = tests_biweekly_state,
+  #       params = prior_params)
+  # ),
+  # get smoothed CTIS survey data
   tar_target(
-    name = state_v1,
-    command = get_v1_state(
-        data = tests_biweekly_state,
-        params = prior_params)
+    name = ctis_smoothed,
+    command = get_smoothed_ctis(
+      ctis = readRDS(here('data/data_raw/ctis_all_states.RDS')),
+      smooth_beta_span = .33,
+      smooth_s_untested_span =.2)
   )
-  
-  
-  
-  
 
 )
