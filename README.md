@@ -44,7 +44,10 @@ See the documentation [here](covidestim.org) for documentation on Covidestim. Ta
       - `biweek`: 2-week interval
       - `posrate`: biweekly positivity rate
 
+### Results
 
+* `state_v1`: priors do not vary by state or date
+* `state_v2`: prior for $\beta$ is centered at ratio of screening test positivity to overall test positivity from the COVID-19 Trends and Impact Survey
 
 ## Repository Structure
 
