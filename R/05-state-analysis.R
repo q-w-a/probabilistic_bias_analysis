@@ -104,6 +104,7 @@ get_smoothed_ctis <- function(ctis_raw,
     mutate(index = row_number()) %>%
     group_split() %>%
     map_df(~ {
+      # message(paste0(unique(.x$state), unique(.x$keep)))
       smoothed_s_untested <- loess(imputed_s_untested~index, 
                                    data = .x,
                                    span = smooth_s_untested_span)
@@ -134,7 +135,9 @@ get_smoothed_ctis <- function(ctis_raw,
 
 #---------- Version 2 -------------
 
-get_v2_state <- function(data, params, ctis, testing = TRUE) {
+get_v2_state <- function(data, params, ctis, vary, testing = TRUE) {
+  
+  dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
   
   state_testing <- data
   
@@ -148,9 +151,6 @@ get_v2_state <- function(data, params, ctis, testing = TRUE) {
   state_testing <- if(testing) state_testing %>% 
     filter(biweek >=6) %>% slice_sample(n=15) else state_testing
   
-  # only keep states that have enough observations of beta
-  ctis <- ctis %>% 
-    filter(keep == TRUE) 
   
   ctis_biweekly <- ctis %>%
     left_join(dates) %>%
@@ -160,34 +160,61 @@ get_v2_state <- function(data, params, ctis, testing = TRUE) {
     mutate(state =toupper(state)) %>%
     select(fips = state,
            biweek, 
-           smoothed_s_untested, 
-           smoothed_beta) 
+           s_untested_smoothed, 
+           beta_estimate_smoothed,
+           keep) 
     
     
     
     
   state_testing <- state_testing %>% 
   #  mutate(fips = tolower(fips)) %>%
-    inner_join(ctis_biweekly, by =c('fips'='fips', 'biweek'='biweek')) %>%
+    inner_join(ctis_biweekly, by =c('fips'='fips', 'biweek'='biweek')) 
+  
+  glimpse(state_testing)
+  
+  corrected <- case_when(vary ==  "beta" ~ 
+                           get_v2_corrected(state_testing, params) %>%
+                           mutate(version="v2"))
+    
+  
+  
+  return(corrected)
+  
+}
+
+
+get_v2_corrected <- function(state_testing, params) {
+  
+  
+  state_testing <- state_testing %>% 
     # only have CTIS data starting at week 6
     # filter out the beginning dates where beta_estimate_smoothed is NA
-    filter(!is.na(smoothed_beta))
-    
+    filter(!is.na(beta_estimate_smoothed))
+  
   
   corrected <- state_testing %>% 
     arrange(biweek) %>%
     # there will be more than one observation per county since
     # beta estimates are at the state level
     distinct() %>%
-    pmap_df(~{
+    pmap_df( function(fips, 
+                      positive, 
+                      total, 
+                      biweek, 
+                      posrate,
+                      population,
+                      ...) {
       
-      state_data <- list(...) %>%  as.data.frame()
+      state_data <- tibble(fips, positive, 
+                           total,  biweek,
+                           posrate, population)
       # message(paste0("before: ",prior_params$beta_mean))
       params$beta_mean <- state_data$beta_estimate_smoothed
       # message(paste0("after: ",prior_params$beta_mean))
       res <- do.call(get_melded, params)
       constrained <- res$post_melding
-  
+      
       # glimpse(constrained)
       
       process_priors_per_county(

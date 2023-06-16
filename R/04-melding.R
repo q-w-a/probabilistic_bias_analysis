@@ -17,12 +17,15 @@ get_melded <- function(alpha_mean = 0.9,
                        post_nsamp = 1e3,
                        include_corrected = TRUE,
                        bde = FALSE,
-                       quiet=FALSE) {
+                       quiet=TRUE) {
   
   
   given_args <- as.list(environment())
-  cat("Arguments to get_melded:\n")
-  print(given_args)
+  
+  if (!quiet) {
+    cat("Arguments to get_melded:\n")
+    print(given_args)
+  } 
   
   
   theta <- tibble(alpha = sample_gamma_density(pre_nsamp,

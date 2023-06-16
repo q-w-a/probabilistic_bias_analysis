@@ -82,7 +82,8 @@ list(
     command = get_v2_state(
       data = tests_biweekly_state,
       params = prior_params,
-      ctis=ctis_smoothed
+      ctis=ctis_smoothed,
+      vary = "beta"
     )
   )
 
