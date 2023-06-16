@@ -17,12 +17,11 @@ tar_option_set(
 # tar_make_clustermq() configuration (okay to leave alone):
 options(clustermq.scheduler = "multicore")
 
-# tar_make_future() configuration (okay to leave alone):
-# Install packages {{future}}, {{future.callr}}, and {{future.batchtools}} to allow use_targets() to configure tar_make_future() options.
-
 # Run the R scripts in the R/ folder with your custom functions:
 #tar_source("R/priors.R")
-tar_source("R/data_cleaning.R")
+tar_source("R/01-data_cleaning.R")
+tar_source("R/02-priors.R")
+
 
 # source("other_functions.R") # Source other scripts as needed. # nolint
 
@@ -32,26 +31,32 @@ list(
   # state-level covidestim
   tar_target(
     name = covidestim_biweekly_state,
-    command = get_covidestim_state_biweekly(),
-    format = "rds"),
+    command = get_covidestim_state_biweekly()),
   # county-level covidestim
   tar_target(
     name = covidestim_biweekly_county,
-    command = get_covidestim_county_biweekly(),
-    format = "rds"),
+    command = get_covidestim_county_biweekly()),
   # state-level testing data
   tar_target(
     name = tests_biweekly_state,
-    command = get_state_testing(),
-    format = "rds"),
+    command = get_state_testing()),
   # county-level testing data
   tar_target(
     name = mi_biweekly_county,
-    command = get_michigan_county(),
-    format = "rds"),
+    command = get_michigan_county()),
   tar_target(
     name = ma_biweekly_county,
-    command = get_mass_county(),
-    format = "rds")
+    command = get_mass_county()),
+  #---------------- analysis -------------------
+  # set priors
+  tar_target(
+    name = prior_params,
+    command= get_priors()
+  )
+  
+  
+  
+  
+  
 
 )

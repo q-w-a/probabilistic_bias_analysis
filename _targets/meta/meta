@@ -11,9 +11,11 @@ get_covidestim_county_biweekly|function|e56a514074048630|||||||||||||||
 get_covidestim_state_biweekly|function|7b1b436f9bb8c7d7|||||||||||||||
 get_mass_county|function|cc264479b6979a67|||||||||||||||
 get_michigan_county|function|479fcc8dc8689467|||||||||||||||
+get_priors|function|5a446a5d7ad7f054|||||||||||||||
 get_state_testing|function|a9a59f6c74dad908|||||||||||||||
 ma_biweekly_county|stem|97bd6eca105b75d4|0ebf6337025f21cb|f920532bcd0f8c9a|-1185512336||t19523.7714301337s|ecd5ff6530e51d8b|8135|rds|local|vector|||1.64||
 mi_biweekly_county|stem|82041c40409a4661|fe7918a56eafd4e4|a5d330c7fb5c9e77|-1031805087||t19523.7161506056s|64583734387ba5dc|40638|rds|local|vector|||2.864||
 population_2019|object|b9e26069e693c38f|||||||||||||||
+prior_params|stem|d3e26a39c7d7be5c|dc2d045f1ffab70a|115284592fa81747|-2037373248||t19524.1002623056s|efa41a4afcb89295|262|rds|local|vector|||0.001||
 tests_biweekly_state|stem|c7c6ae0f262b12af|2f241e580a396879|ce4554d82c5378b6|1602525337||t19523.6530260569s|37ba32ca85c8775d|33295|rds|local|vector|||6.269||
 url_2019|object|7b3507b3139e4a32|||||||||||||||
