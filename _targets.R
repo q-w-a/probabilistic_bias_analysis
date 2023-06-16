@@ -55,25 +55,35 @@ list(
     name = ma_biweekly_county,
     command = get_mass_county()),
   
-  #---------------- analysis -------------------
+  #---------------- state-level analysis -------------------
   # set priors
   tar_target(
     name = prior_params,
     command= get_priors()
   ),
-  # tar_target(
-  #   name = state_v1,
-  #   command = get_v1_state(
-  #       data = tests_biweekly_state,
-  #       params = prior_params)
-  # ),
+  # version 1
+  tar_target(
+    name = state_v1,
+    command = get_v1_state(
+        data = tests_biweekly_state,
+        params = prior_params)
+  ),
   # get smoothed CTIS survey data
   tar_target(
     name = ctis_smoothed,
     command = get_smoothed_ctis(
-      ctis = readRDS(here('data/data_raw/ctis_all_states.RDS')),
+      ctis_raw = readRDS(here('data/data_raw/ctis_all_states.RDS')),
       smooth_beta_span = .33,
       smooth_s_untested_span =.2)
+  ),
+  # version 2
+  tar_target(
+    name = state_v2,
+    command = get_v2_state(
+      data = tests_biweekly_state,
+      params = prior_params,
+      ctis=ctis_smoothed
+    )
   )
 
 )
