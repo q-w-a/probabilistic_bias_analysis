@@ -135,7 +135,7 @@ get_smoothed_ctis <- function(ctis_raw,
 
 #---------- Version 2 -------------
 
-get_v2_state <- function(data, params, ctis, vary, testing = TRUE) {
+get_corrected_state <- function(data, params, ctis, vary, testing = TRUE) {
   
   dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
   

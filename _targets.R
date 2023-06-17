@@ -79,7 +79,7 @@ list(
   # version 2
   tar_target(
     name = state_v2,
-    command = get_v2_state(
+    command = get_corrected_state(
       data = tests_biweekly_state,
       params = prior_params,
       ctis=ctis_smoothed,
