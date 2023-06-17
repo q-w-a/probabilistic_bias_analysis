@@ -46,15 +46,30 @@ See the documentation [here](covidestim.org) for documentation on Covidestim. Ta
 
 ### Results
 
+#### State Results 
+
 * `state_v1`: priors do not vary by state or date
 * `state_v2`: prior for $\beta$ is centered at ratio of screening test positivity to overall test positivity from the COVID-19 Trends and Impact Survey
+* `state_v3`: prior for $\Pr(S_1|\text{untested})$ is centered at ratio of screening test positivity to overall test positivity from the COVID-19 Trends and Impact Survey
+* `state_v4`: prior for $\Pr(S_1|\text{untested})$ is centered at ratio of screening test positivity to overall test positivity from the COVID-19 Trends and Impact Survey
 
-## Repository Structure
+#### County Results 
 
-- `data_raw`
-- `data_clean`
-- `scripts`
-- `figures`
-- `output`
-- `results`
+##### Massachusetts
 
+State-level [COVID-19 Trends and Impact Survey](https://delphi.cmu.edu/covid19/ctis/) data used to allow priors to vary by date.
+
+* `ma_v1`: priors do not vary by date
+* `ma_v2`: prior for $\beta$ is centered at ratio of screening test positivity to overall test positivity from the COVID-19 Trends and Impact Survey
+* `ma_v3`: prior for $\Pr(S_1|\text{untested})$ is centered at ratio of screening test positivity to overall test positivity from the COVID-19 Trends and Impact Survey
+* `ma_v4`: prior for $\Pr(S_1|\text{untested})$ is centered at ratio of screening test positivity to overall test positivity from the COVID-19 Trends and Impact Survey
+
+# Repository Structure
+
+All analyses can be reproduced by running `tar_make()`, which runs the file containing the full pipeline, `_targets.R`. 
+
+Directories:
+
+- `_targets`: where targets from  `_targets.R` are saved; can be accessed with `tar_read` more quickly rather than reading the RDS files directly from `_targets/objects`
+- `R`: scripts forming the core of the analyses, which are run in the pipeline in  `_targets.R`
+- `app` Shiny app for exploring implications of changing priors
