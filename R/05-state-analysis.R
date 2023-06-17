@@ -185,21 +185,7 @@ get_corrected_state <- function(data, params, ctis, vary, testing = FALSE) {
     message("v4")
     corrected <- get_v4_corrected(state_testing, params) %>%
       mutate(version="v4") }
-  
-  
-  
-  
-  # corrected <- case_when(vary ==  "beta" ~ 
-  #                          get_v2_corrected(state_testing, params) %>%
-  #                          mutate(version="v2"),
-  #                        vary == "s_untested" ~ 
-  #                          get_v3_corrected(state_testing, params) %>%
-  #                          mutate(version="v3"),
-  #                        vary == "s_untested_and_beta" ~ 
-  #                          get_v4_corrected(state_testing, params) %>%
-  #                          mutate(version="v4"))
-  #   
-  
+
   
   return(corrected)
   
@@ -266,13 +252,7 @@ get_v2_corrected <- function(state_testing, params) {
 get_v3_corrected <- function(state_testing, params) {
   
   message("Running version 3")
-  
-  
-  state_testing <- state_testing %>% 
-    # only have CTIS data starting at week 6
-    # filter out the beginning dates where beta_estimate_smoothed is NA
-    filter(!is.na(beta_estimate_smoothed))
-  
+
   
   corrected <- state_testing %>% 
     arrange(biweek) %>%

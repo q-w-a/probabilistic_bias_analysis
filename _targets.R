@@ -26,6 +26,7 @@ tar_source("R/02-priors.R")
 tar_source("R/03-base-functions.R")
 tar_source("R/04-melding.R")
 tar_source("R/05-state-analysis.R")
+tar_source("R/06-county-analysis.R")
 
 
 
@@ -105,12 +106,52 @@ list(
       ctis=ctis_smoothed,
       vary = "s_untested_and_beta"
     )
+  ),
+  
+  
+  #---------------- county-level analysis -------------------
+  
+  #------ MA ---------
+  # version 1
+  tar_target(
+    name = ma_v1,
+    command = get_county_v1(
+      data = ma_biweekly_county,
+      params = prior_params
+    )
+  ),
+  tar_target(
+    name = ma_v2,
+    command = get_corrected_county(
+      data = ma_biweekly_county,
+      params = prior_params,
+      ctis=ctis_smoothed,
+      vary = "beta"
+    )
+  ),
+  tar_target(
+    name = ma_v3,
+    command = get_corrected_county(
+      data = ma_biweekly_county,
+      params = prior_params,
+      ctis=ctis_smoothed,
+      vary = "s_untested"
+    )
+  ),
+  tar_target(
+    name = ma_v4,
+    command = get_corrected_county(
+      data = ma_biweekly_county,
+      params = prior_params,
+      ctis=ctis_smoothed,
+      vary = "s_untested_and_beta"
+    )
   )
-  
-  
-
 )
 
+# tar_read(ma_v2)
+# tar_read(ma_v3)
+# tar_read(ma_v4)
 
 
 # for testing
