@@ -38,6 +38,9 @@ get_v1_state <- function(data, params, testing = FALSE) {
       generate_corrected_sample(., num_reps = 1e3) %>%
       summarize_corrected_sample() })
   
+  corrected <- corrected %>%
+    mutate(version="v1")
+  
   return(corrected)
   
 }
