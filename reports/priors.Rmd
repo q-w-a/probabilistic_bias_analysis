@@ -1,0 +1,195 @@
+---
+title: "Priors"
+author: "Quinn White"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    df_print: paged
+    code_folding: hide
+    css: !expr here::here('css/template.css')
+  html_document:
+    df_print: paged
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input,
+      output_dir = "../output_html")})
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+
+library(tidyverse)
+library(targets)
+library(here)
+
+
+# read priors from target
+prior_params <- tar_read(prior_params,
+                         store = here("_targets"))
+# load beta_density, gamma_density functions
+source(here("R/03-base-functions.R"))
+
+```
+
+```{r}
+
+
+theme_c <- function(...){ 
+   # font <- "Helvetica"   #assign font family up front
+    theme_bw() %+replace%    #replace elements we want to change
+    
+    theme(
+      
+      
+      #text elements
+      plot.title = element_text(             #title
+                   size = 16,                #set font size
+                   face = 'bold',            #bold typeface
+                   hjust = .5,
+                   vjust = 3),               
+      
+      plot.subtitle = element_text(          #subtitle
+                   size = 12,
+                   hjust = .5,
+                   face = 'italic',
+                   vjust = 3),               #font size
+      
+      axis.title = element_text(             #axis titles
+                   size = 12),               #font size
+      
+      axis.text.x = element_text(              #axis text
+                   size = 12),
+      legend.text = element_text(size = 18),
+      # t, r, b, l
+      plot.margin = unit(c(1,.5,.5,.5), "cm"),
+      legend.position = "right",
+      strip.text.x = element_text(size = 16, face = "bold", color="white"),
+      strip.background = element_rect(fill = "#3E3D3D")
+      ) %+replace%
+      theme(...)
+   
+}
+
+```
+
+# $\alpha$ 
+
+
+```{r}
+
+tibble(x = seq(0, 1.3, length = 10^(5)),
+       y = with(prior_params, gamma_density(x,
+                                     mean = alpha_mean,
+                                     sd = alpha_sd,
+                                     bounds = alpha_bounds))) %>%
+   ggplot(aes(x=x, y = y)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0,ymax=y),
+              fill="black",
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $\\alpha$"),
+       fill ='',
+       subtitle = paste0("Mean: ", prior_params$alpha_mean,
+                         ", SD: ", prior_params$alpha_sd))
+
+
+```
+
+
+# $\beta$ 
+
+```{r}
+
+tibble(x = seq(0, 1, length = 10^(5)),
+       y = with(prior_params, beta_density(x,
+                                     mean = beta_mean,
+                                     sd = beta_sd,
+                                     bounds = beta_bounds))) %>%
+   ggplot(aes(x=x, y = y)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0,ymax=y),
+              fill="black",
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $\\beta$"),
+       fill ='',
+       subtitle = paste0("Mean: ", prior_params$beta_mean,
+                         ", SD: ", prior_params$beta_sd))
+
+
+```
+
+
+# $P(S_1|\text{untested})$
+
+```{r}
+
+
+tibble(x = seq(0, 1, length = 10^(5)),
+       y = with(prior_params, beta_density(x,
+                                     mean = s_untested_mean,
+                                     sd = s_untested_sd,
+                                     bounds = s_untested_bounds))) %>%
+   ggplot(aes(x=x, y = y)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0,ymax=y),
+              fill="black",
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $P(S_1|untested)$"),
+       fill ='',
+       subtitle = paste0("Mean: ", prior_params$s_untested_mean,
+                         ", SD: ", prior_params$s_untested_sd))
+
+
+
+
+
+```
+
+
+
+# $P(S_0|  \text{test}_+, \text{untested})$
+
+```{r}
+
+
+tibble(x = seq(0, 1, length = 10^(5)),
+       y = with(prior_params, beta_density(x,
+                                     mean = p_s0_pos_mean,
+                                     sd = p_s0_pos_sd,
+                                     bounds = p_s0_pos_bounds))) %>%
+   ggplot(aes(x=x, y = y)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0,ymax=y),
+              fill="black",
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $P(S_0|test_+,untested)$"),
+       fill ='',
+       subtitle = paste0("Mean: ", prior_params$p_s0_pos_mean,
+                         ", SD: ", prior_params$p_s0_pos_sd))
+
+
+
+
+
+```
+
