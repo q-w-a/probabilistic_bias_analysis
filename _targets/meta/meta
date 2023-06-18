@@ -13,11 +13,12 @@ est_P_A_testpos|function|c94abc4069607e14|||||||||||||||
 gamma_density|function|8e95168d54d6151b|||||||||||||||
 generate_corrected_sample|function|e5052b178fa1e7cc|||||||||||||||
 get_beta_params|function|8b04715209f1e0dc|||||||||||||||
+get_biweekly_wastewater|function|78885a87436c9bba|||||||||||||||
 get_corrected_counts|function|4487e8b00d5feb8a|||||||||||||||
 get_corrected_county|function|7233062f7a42b963|||||||||||||||
 get_corrected_state|function|74db3100c85c33ef|||||||||||||||
 get_county_pop|function|5ba368814fa2682d|||||||||||||||
-get_county_v1|function|794179b29e67a1b2|||||||||||||||
+get_county_v1|function|9f3006088a8eecdd|||||||||||||||
 get_covidestim_biweekly|function|bc029be2fd03d3e7|||||||||||||||
 get_covidestim_county_biweekly|function|e56a514074048630|||||||||||||||
 get_covidestim_state_biweekly|function|7b1b436f9bb8c7d7|||||||||||||||
@@ -31,7 +32,7 @@ get_shape1|function|8678a2b32bb038d8|||||||||||||||
 get_shape2|function|6742d398675337c8|||||||||||||||
 get_smoothed_ctis|function|fd19148cfa708f23|||||||||||||||
 get_state_testing|function|b46501deb3dfa9b2|||||||||||||||
-get_v1_state|function|61e62ed86d300bd0|||||||||||||||
+get_v1_state|function|8cef27500ae6df33|||||||||||||||
 get_v2_corrected|function|b937ad883197ce71|||||||||||||||
 get_v2_state|function|b3045b2804899d2d|||||||||||||||
 get_v3_corrected|function|5e4ae4573912ee90|||||||||||||||
@@ -57,3 +58,4 @@ state_v4|stem|ecdd3eb8378c44db|b4520f67ce4fe07a|712a7d8d47e1770b|-1425313305||t1
 summarize_corrected_sample|function|a0cb7c8964ee68db|||||||||||||||
 tests_biweekly_state|stem|5e20d1c14ac742dd|2f241e580a396879|fdca40a0be45182e|1602525337||t19525.1247164183s|20987c5efcb9111d|40899|rds|local|vector|||6.895||
 url_2019|object|7b3507b3139e4a32|||||||||||||||
+waste|stem|6e3e29146007f932|959b19dc0fa72e13|17300d8e8c16af7e|-443262632||t19526.9361340537s|2081fc10a45bc22f|30519|rds|local|vector|||3.604||

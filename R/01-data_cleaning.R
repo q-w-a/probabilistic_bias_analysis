@@ -566,10 +566,11 @@ get_biweekly_wastewater <- function() {
   
   biobot_link <- "https://raw.githubusercontent.com/biobotanalytics/covid19-wastewater-data/master/wastewater_by_county.csv"
   
-  dates <- readRDS(here("data", "date_to_biweek.RDS"))
+  dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
   
   w_data <- read_csv(biobot_link)%>% 
-    filter(sampling_week >= ymd("2021-03-01") &  sampling_week <= ymd("2022-03-01")) %>%
+    filter(sampling_week >= ymd("2021-03-01") &  
+             sampling_week <= ymd("2022-03-01")) %>%
     mutate(fips = as.character(fipscode)) %>%
     select(-fipscode)  %>%
     left_join(dates, by = c("sampling_week" = "date")) %>%
