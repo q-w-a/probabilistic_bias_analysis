@@ -72,4 +72,4 @@ Directories:
 
 - `_targets`: where targets from  `_targets.R` are saved; can be accessed with `tar_read` more quickly rather than reading the RDS files directly from `_targets/objects`
 - `R`: scripts forming the core of the analyses, which are run in the pipeline in  `_targets.R`
-- `app` Shiny app for exploring implications of changing priors
+- `app`: Shiny app for exploring implications of changing priors
