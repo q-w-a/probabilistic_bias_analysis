@@ -120,6 +120,7 @@ list(
       params = prior_params
     )
   ),
+  # version 2
   tar_target(
     name = ma_v2,
     command = get_corrected_county(
@@ -129,6 +130,7 @@ list(
       vary = "beta"
     )
   ),
+  # version 3
   tar_target(
     name = ma_v3,
     command = get_corrected_county(
@@ -138,6 +140,7 @@ list(
       vary = "s_untested"
     )
   ),
+  # version 4
   tar_target(
     name = ma_v4,
     command = get_corrected_county(
@@ -146,7 +149,14 @@ list(
       ctis=ctis_smoothed,
       vary = "s_untested_and_beta"
     )
-  )
+  ),
+  
+  tar_target(
+    name = waste,
+    command = get_biweekly_wastewater())
+  
+  
+  
 )
 
 # tar_read(ma_v2)
