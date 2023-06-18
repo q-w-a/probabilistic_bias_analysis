@@ -560,6 +560,52 @@ save_survey_data <- function() {
 
 
 
+#----------- Wastewater Data ----------------
+
+get_biweekly_wastewater <- function() {
+  
+  biobot_link <- "https://raw.githubusercontent.com/biobotanalytics/covid19-wastewater-data/master/wastewater_by_county.csv"
+  
+  dates <- readRDS(here("data", "date_to_biweek.RDS"))
+  
+  w_data <- read_csv(biobot_link)%>% 
+    filter(sampling_week >= ymd("2021-03-01") &  sampling_week <= ymd("2022-03-01")) %>%
+    mutate(fips = as.character(fipscode)) %>%
+    select(-fipscode)  %>%
+    left_join(dates, by = c("sampling_week" = "date")) %>%
+    group_by(fips, biweek, state,name) %>%
+    summarize(mean_conc = mean(effective_concentration_rolling_average, na.rm= TRUE)) %>%
+    ungroup()
+  
+  
+  
+  # fill in missing values with rolling mean
+  w_data <- w_data %>% 
+    group_by(fips) %>%
+    # keep track of min biweek make sure to not fill in values
+    # before first data point when using rolled mean
+    mutate(min_biweek = min(biweek)) %>%
+    ungroup() %>%
+    pivot_wider(names_from = biweek,
+                values_from = mean_conc) %>% 
+    pivot_longer(cols = -c(fips,state, name, min_biweek), 
+                 names_to = "biweek", 
+                 values_to = "mean_conc") %>%
+    mutate(biweek = as.numeric(biweek)) %>%
+    group_by(fips) %>%
+    arrange(biweek) %>%
+    mutate(rolled_mean = RcppRoll::roll_mean(mean_conc,
+                                             n = 4,
+                                             na.rm = TRUE,
+                                             fill = NA),
+           mean_conc = ifelse(is.na(mean_conc) & biweek >= min_biweek, 
+                              rolled_mean, mean_conc)) %>%
+    ungroup()
+  
+  return(w_data)
+  
+}
+
 
 
 
