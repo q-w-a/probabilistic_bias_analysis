@@ -47,8 +47,6 @@ get_v1_state <- function(data, params, testing = FALSE) {
 
 
 #------------- Using CTIS Data ----------------
-
-
 get_smoothed_ctis <- function(ctis_raw,
                               smooth_beta_span = .33,
                               smooth_s_untested_span =.2) {
@@ -117,26 +115,37 @@ get_smoothed_ctis <- function(ctis_raw,
         smoothed_beta <- loess(imputed_beta~index, 
                                data = .x, 
                                span = smooth_beta_span)
+        # 257 corresponds to 2021-12-01
+        spline_smoothed_beta <- lm(imputed_beta ~ splines::bs(index,knots = c(118, 257)), 
+                                   data = .x )
+        
+        # include both spline smoothing and loess smoothing for beta
         .x %>%
-          mutate(beta_estimate_smoothed = predict(smoothed_beta),
-                 s_untested_smoothed = predict(smoothed_s_untested)) 
+          mutate(beta_estimate_smoothed = predict(smoothed_beta, newdata = index),
+                 beta_estimate_spline_smoothed = predict(spline_smoothed_beta, newx= index),
+                 s_untested_smoothed = predict(smoothed_s_untested, newdata = index)) 
       }
       
       else {
         .x %>%
-          mutate(s_untested_smoothed = predict(smoothed_s_untested)) 
+          mutate(s_untested_smoothed = predict(smoothed_s_untested,newdata = index)) 
   
       }
      
     } ) 
   
-  return(symp_smooth)
+  symp_smooth %>% 
+    select(-c(m,n,prop_with_data, index)) %>%
+    return()
   
 }
 
 
 
-get_corrected_state <- function(data, params, ctis, vary, testing = FALSE) {
+get_corrected_state <- function(data, params,
+                                ctis, vary, 
+                                spline=FALSE,
+                                testing = FALSE) {
   
   dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
   
@@ -165,29 +174,45 @@ get_corrected_state <- function(data, params, ctis, vary, testing = FALSE) {
            beta_estimate_smoothed,
            keep) 
     
-    
-    
-    
   state_testing <- state_testing %>% 
   #  mutate(fips = tolower(fips)) %>%
     inner_join(ctis_biweekly, by =c('fips'='fips', 'biweek'='biweek')) 
   
   # glimpse(state_testing)
   
-  if(vary=="beta") {
+  
+  ##########################
+  # loess smoothing
+  ##########################
+  if(vary=="beta" & spline == FALSE) {
     message("v2")
     corrected <- get_v2_corrected(state_testing, params) %>%
     mutate(version="v2") }
   
-  if(vary=="s_untested") {
+  if(vary=="s_untested" & spline == FALSE) {
     message("v3")
     corrected <- get_v3_corrected(state_testing, params) %>%
       mutate(version="v3") }
   
-  if(vary=="s_untested_and_beta") {
+  if(vary=="s_untested_and_beta" & spline == FALSE) {
     message("v4")
     corrected <- get_v4_corrected(state_testing, params) %>%
       mutate(version="v4") }
+  
+  ##########################
+  # spline smoothing
+  ##########################
+  if(vary=="beta" & spline == TRUE) {
+    message("v5")
+    corrected <- get_v5_corrected(state_testing, params) %>%
+      mutate(version="v5") }
+  
+  if(vary=="s_untested_and_beta" & spline == TRUE) {
+    message("v6")
+    corrected <- get_v5_corrected(state_testing, params) %>%
+      mutate(version="v6") }
+  
+  
 
   
   return(corrected)
@@ -301,7 +326,7 @@ get_v3_corrected <- function(state_testing, params) {
 
 
 #---------- Version 4 ---------------------------------
-# center prior for P(S_1|untested) at survey estimates 
+# center prior for BOTH P(S_1|untested) and beta at survey estimates 
 get_v4_corrected <- function(state_testing, params) {
   
   message("Running version 4")
@@ -352,3 +377,118 @@ get_v4_corrected <- function(state_testing, params) {
   return(corrected)
   
 }
+
+
+
+
+
+#---------- Version 5 ---------------------------------
+# center prior for beta at survey estimate (spline smoothed) 
+# at survey estimate (loess smoothed) 
+get_v5_corrected <- function(state_testing, params) {
+  
+  message("Running version 5")
+  
+  state_testing <- state_testing %>% 
+    # only have CTIS data starting at week 6
+    # filter out the beginning dates where beta_estimate_smoothed is NA
+    filter(!is.na(beta_estimate_smoothed))
+  
+  
+  corrected <- state_testing %>% 
+    arrange(biweek) %>%
+    # there will be more than one observation per county since
+    # beta estimates are at the state level
+    distinct() %>%
+    pmap_df( function(fips, 
+                      positive, 
+                      total, 
+                      biweek, 
+                      posrate,
+                      population,
+                      beta_estimate_smoothed,
+                      s_untested_smoothed,
+                      ...) {
+      
+      state_data <- tibble(fips, positive, 
+                           total,  biweek,
+                           posrate, population,
+                           beta_estimate_smoothed,
+                           s_untested_smoothed)
+      # message(paste0("before: ",prior_params$beta_mean))
+      params$beta_mean <- state_data$beta_estimate_spline_smoothed
+      # params$s_untested_mean <- state_data$s_untested_smoothed
+      # message(paste0("after: ",prior_params$beta_mean))
+      res <- do.call(get_melded, params)
+      constrained <- res$post_melding
+      
+      # glimpse(constrained)
+      
+      process_priors_per_county(
+        priors = constrained, 
+        county_df = state_data,
+        nsamp = params$post_nsamp) %>%
+        generate_corrected_sample(., num_reps = 1e3) %>%
+        summarize_corrected_sample()
+    })
+  
+  return(corrected)
+  
+}
+
+
+
+#---------- Version 6 ---------------------------------
+# center prior for beta at survey estimate (spline smoothed) and P(S_1|untested) 
+# at survey estimate (loess smoothed) 
+get_v6_corrected <- function(state_testing, params) {
+  
+  message("Running version 6")
+  
+  state_testing <- state_testing %>% 
+    # only have CTIS data starting at week 6
+    # filter out the beginning dates where beta_estimate_smoothed is NA
+    filter(!is.na(beta_estimate_smoothed))
+  
+  
+  corrected <- state_testing %>% 
+    arrange(biweek) %>%
+    # there will be more than one observation per county since
+    # beta estimates are at the state level
+    distinct() %>%
+    pmap_df( function(fips, 
+                      positive, 
+                      total, 
+                      biweek, 
+                      posrate,
+                      population,
+                      beta_estimate_smoothed,
+                      s_untested_smoothed,
+                      ...) {
+      
+      state_data <- tibble(fips, positive, 
+                           total,  biweek,
+                           posrate, population,
+                           beta_estimate_smoothed,
+                           s_untested_smoothed)
+      # message(paste0("before: ",prior_params$beta_mean))
+      params$beta_mean <- state_data$beta_estimate_spline_smoothed
+      params$s_untested_mean <- state_data$s_untested_smoothed
+      # message(paste0("after: ",prior_params$beta_mean))
+      res <- do.call(get_melded, params)
+      constrained <- res$post_melding
+      
+      # glimpse(constrained)
+      
+      process_priors_per_county(
+        priors = constrained, 
+        county_df = state_data,
+        nsamp = params$post_nsamp) %>%
+        generate_corrected_sample(., num_reps = 1e3) %>%
+        summarize_corrected_sample()
+    })
+  
+  return(corrected)
+  
+}
+
