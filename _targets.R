@@ -107,6 +107,28 @@ list(
       vary = "s_untested_and_beta"
     )
   ),
+  # version 5
+  tar_target(
+    name = state_v5,
+    command = get_corrected_state(
+      data = tests_biweekly_state,
+      params = prior_params,
+      ctis=ctis_smoothed,
+      spline=TRUE,
+      vary = "beta"
+    )
+  ),
+  # version 6
+  tar_target(
+    name = state_v6,
+    command = get_corrected_state(
+      data = tests_biweekly_state,
+      params = prior_params,
+      ctis=ctis_smoothed,
+      spline=TRUE,
+      vary = "s_untested_and_beta"
+    )
+  ),
   
   
   #---------------- county-level analysis -------------------
@@ -151,10 +173,33 @@ list(
     )
   ),
   
+  # version 5
+  tar_target(
+    name = ma_v5,
+    command = get_corrected_county(
+      data = ma_biweekly_county,
+      params = prior_params,
+      ctis=ctis_smoothed,
+      spline=TRUE,
+      vary = "beta"
+    )
+  ),
+  
+  # version 6
+  tar_target(
+    name = ma_v6,
+    command = get_corrected_county(
+      data = ma_biweekly_county,
+      params = prior_params,
+      ctis=ctis_smoothed,
+      spline=TRUE,
+      vary = "s_untested_and_beta"
+    )
+  ),
+  
   tar_target(
     name = waste,
     command = get_biweekly_wastewater())
-  
   
   
 )
