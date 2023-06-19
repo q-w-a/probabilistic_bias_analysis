@@ -2,11 +2,285 @@
 title: "County Correlations"
 author: "Quinn White"
 date: "`r Sys.Date()`"
-output: html_document
+output:
+  rmdformats::readthedown:
+    df_print: paged
+    code_folding: hide
+    css: !expr here::here('css/template.css')
+  html_document:
+    df_print: paged
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input,
+      output_dir = "../output_html")})
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
+
+library(tidyverse)
+library(targets)
+library(here)
+library(latex2exp)
+
+```
+
+
+```{r theme_c}
+
+theme_c <- function(...){ 
+   # font <- "Helvetica"   #assign font family up front
+    theme_bw() %+replace%    #replace elements we want to change
+    
+    theme(
+      
+      
+      #text elements
+      plot.title = element_text(             #title
+                   size = 16,                #set font size
+                   face = 'bold',            #bold typeface
+                   hjust = .5,
+                   vjust = 3),               
+      
+      plot.subtitle = element_text(          #subtitle
+                   size = 12,
+                   hjust = .5,
+                   face = 'italic',
+                   vjust = 3),               #font size
+      
+      axis.title = element_text(             #axis titles
+                   size = 12),               #font size
+      
+      axis.text = element_text(              #axis text
+                   size = 9),
+      legend.text = element_text(size = 12),
+      # t, r, b, l
+      plot.margin = unit(c(1,.5,.5,.5), "cm"),
+      legend.position = "right",
+      strip.text.x = element_text(size = 11, face = "bold", color="white"),
+      strip.background = element_rect(fill = "#3E3D3D")
+      ) %+replace%
+      theme(...)
+   
+}
+
+```
+
+
+```{r load-data}
+
+county <- tar_read(ma_v1, 
+                   store = here("_targets")) %>% 
+  mutate(version = "v1") %>%
+  bind_rows(
+    tar_read(ma_v2,
+             store = here("_targets"))
+  ) %>%
+   bind_rows(
+    tar_read(ma_v3, 
+             store = here("_targets"))
+  ) %>%
+   bind_rows(
+    tar_read(ma_v4, 
+             store = here("_targets"))
+  )
+
+waste <- tar_read(waste, store = here("_targets"))
+covidestim <- tar_read(covidestim_biweekly_county,
+                        store = here("_targets"))
+
+
+```
+
+```{r}
+
+wjoined <- county %>%
+  # set Nantucket, Duke fips to Nantucket since we have wastewater data
+  # for Nantucket
+  mutate(fips = ifelse(grepl("25019", fips), "25019", fips)) %>%
+  inner_join(waste) %>%
+  left_join(covidestim, relationship = "many-to-many") %>%
+  group_by(biweek) %>%
+  mutate(mindate = min(date),
+         maxdate = max(date)) %>%
+  ungroup()
+
+counties_with_waste <- wjoined %>%
+  group_by(fips) %>%
+  mutate(obs_w_notna = sum(!is.na(mean_conc))) %>%
+  filter(obs_w_notna != 0) %>%
+  pull(fips) %>%
+  unique()
+
+
+
+versions <- tibble(
+  version = c("v1", "v2", "v3", "v4"),
+  vlabel = factor(
+    c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+    "$\\beta$ Centered at Emp. Value",
+    "$P(S_1|untested)$ Centered at Emp. Value",
+    "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values"
+    ),
+    levels = c(
+        "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+        "$\\beta$ Centered at Emp. Value",
+         "$P(S_1|untested)$ Centered at Emp. Value",
+        "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values"
+       
+    ) )
+)
+
+wjoined <- wjoined %>%
+  left_join(versions)
+
+
+w_data <- wjoined %>% 
+  select(-date) %>%
+  distinct() %>%
+  filter(fips %in% counties_with_waste) %>%
+  filter(!is.na(mean_conc)) %>%
+  group_by(fips) %>%
+  mutate(mean_conc_std = mean_conc/ max(mean_conc),
+         exp_cases_median_std = exp_cases_median / max(exp_cases_median),
+         exp_cases_lb_std = exp_cases_lb /max(exp_cases_median),
+         exp_cases_ub_std = exp_cases_ub / max(exp_cases_median),
+         infections_std  = infections/max(infections),
+         positive_std = positive/max(positive)) %>%
+  ungroup()
+
+```
+
+
+# Correlations 
+
+For each county, normalize the wastewater concentration by the maximum concentration for that county and the probabilistic bias counts by the maximum *median* estimated counts for that county (2.5th percentile and 97.5th percentile also standardized by the maximum *median* estimated counts for that county).
+
+## Wastewater
+
+```{r}
+
+# correlations between PB counts and wastewater concentrations
+
+correlations <- w_data %>%
+  group_by(version) %>%
+  summarize(Correlation = cor(exp_cases_median_std,mean_conc_std),
+            vlabel =unique(vlabel)) %>%
+  mutate(x=1.3,
+         y=.1)
+
+w_data %>%
+  group_by(version) %>%
+  ggplot(aes(x=exp_cases_median_std, y = mean_conc_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = mean_conc_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= correlations ) +
+  facet_wrap(~vlabel,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Mean Wastewater Concentration\n(Standardized)",
+       title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
+
+```
+
+## Covidestim
+
+
+```{r}
+
+# correlations between PB counts and Covidestim estimates
+
+
+covidestim_correlations <- w_data %>%
+  filter(!is.na(infections_std)) %>%
+  group_by(vlabel) %>%
+  # missing values are handled by casewise deletion
+  summarize(Correlation = cor(exp_cases_median_std,infections_std,
+                              use = "complete.obs")) %>%
+  mutate(x=1.3,
+         y=.1)
+
+
+
+w_data %>%
+  ggplot(aes(x=exp_cases_median_std, y = infections_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = infections_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= covidestim_correlations ) +
+  facet_wrap(~vlabel,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Covidestim Estimates\n(Standardized)",
+       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+
+
+```
+
+
+
+## Covidestim and Wastewater
+
+
+```{r}
+
+covidestim_correlations <- w_data %>%
+  filter(version=="v1") %>%
+  # missing values are handled by casewise deletion
+  summarize(Correlation = cor(mean_conc_std,infections_std,
+                              use = "complete.obs")) %>%
+  mutate(x=1.3,
+         y=.1) 
+
+
+
+w_data %>%
+  filter(version=="v1") %>%
+  ggplot(aes(x=infections_std, y = mean_conc_std)) +
+  geom_point(alpha=.5) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= covidestim_correlations ) +
+  facet_wrap(~vlabel,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Covidestim Estimates\n(Standardized)",
+       y = "Wastewater Concentrations\n(Standardized)",
+       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+
+
+
+
+pb_correlations <- w_data %>%
+  filter(version=="v1") %>%
+  # missing values are handled by casewise deletion
+  summarize(Correlation = cor(positive_std,mean_conc_std,
+                              use = "complete.obs")) %>%
+  mutate(x=1.3,
+         y=.1) 
+
+
+
+
+
+
 ```
 
 

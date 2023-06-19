@@ -29,9 +29,6 @@ prior_params <- tar_read(prior_params,
 # load beta_density, gamma_density functions
 source(here("R/03-base-functions.R"))
 
-```
-
-```{r}
 
 
 theme_c <- function(...){ 
@@ -188,6 +185,59 @@ tibble(x = seq(0, 1, length = 10^(5)),
                          ", SD: ", prior_params$p_s0_pos_sd))
 
 
+
+
+
+```
+
+# COVID-19 Trends and Impact Survey
+
+
+```{r}
+
+ctis_smoothed <- tar_read(ctis_smoothed,store = here("_targets"))
+
+```
+
+```{r}
+
+ctis_smoothed  %>%
+  filter(keep) %>%
+  mutate(state=toupper(state)) %>%
+  select(date,
+         state, 
+         imputed_beta,
+         beta_estimate_smoothed, 
+         beta_estimate_spline_smoothed) %>%
+  pivot_longer(contains("beta")) %>%
+  mutate(name = case_when(
+    name == "beta_estimate_smoothed" ~ "LOESS smoothed",
+    name == "beta_estimate_spline_smoothed" ~ "Spline smoothed",
+    name == "imputed_beta" ~ "Survey Value"
+  )) %>%
+  ggplot(aes(x=date, y=value, color = name, 
+             alpha = name, linewidth=name)) +
+  geom_line() +
+  facet_wrap(~state, ncol=4) +
+  scale_alpha_manual(values=c("LOESS smoothed" = .9, 
+                            "Spline smoothed" = .9, 
+                              "Survey Value"=.3),
+                     name='') +
+  scale_linewidth_manual(values = c("LOESS smoothed" = 1.05, 
+                            "Spline smoothed" = 1.05, 
+                              "Survey Value"=.5)) +
+  scale_color_manual(values=c("#3381FF", "#B58746", "#26900F"),
+                     name ='') +
+  guides(alpha="none",
+         linewidth="none",
+         color = guide_legend(override.aes = list(linewidth = 3,
+                                                  alpha = c("LOESS smoothed" = .9, 
+                            "Spline smoothed" = .9, 
+                              "Survey Value"=.3)))) +
+  theme_c() +
+  ylim(0,1) +
+  scale_x_date(date_breaks="3 months",
+               date_labels = "%b %Y")
 
 
 
