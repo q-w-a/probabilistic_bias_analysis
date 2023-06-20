@@ -1,5 +1,5 @@
 ---
-title: "County Correlations"
+title: "County Results"
 author: "Quinn White"
 date: "`r Sys.Date()`"
 output:
@@ -9,6 +9,7 @@ output:
     css: !expr here::here('css/template.css')
   html_document:
     df_print: paged
+    toc-depth: 4
 knit: (function(input, ...) {
     rmarkdown::render(
       input,
@@ -58,6 +59,7 @@ theme_c <- function(...){
       plot.margin = unit(c(1,.5,.5,.5), "cm"),
       legend.position = "right",
       strip.text.x = element_text(size = 11, face = "bold", color="white"),
+      strip.text.y = element_text(size = 11, face = "bold", color="white",angle=270),
       strip.background = element_rect(fill = "#3E3D3D")
       ) %+replace%
       theme(...)
@@ -69,26 +71,37 @@ theme_c <- function(...){
 
 ```{r load-data}
 
+targets_dir <- here("_targets_6_19")
+
 county <- tar_read(ma_v1, 
-                   store = here("_targets")) %>% 
+                   store =targets_dir) %>% 
   mutate(version = "v1") %>%
   bind_rows(
     tar_read(ma_v2,
-             store = here("_targets"))
+             store =targets_dir)
   ) %>%
    bind_rows(
     tar_read(ma_v3, 
-             store = here("_targets"))
+             store =targets_dir)
   ) %>%
    bind_rows(
     tar_read(ma_v4, 
-             store = here("_targets"))
-  )
+             store =targets_dir)
+  # )%>%
+  #  bind_rows(
+  #   tar_read(ma_v5, 
+  #            store =targets_dir)
+  # )%>%
+  #  bind_rows(
+  #   tar_read(ma_v6, 
+  #            store =targets_dir)
+   )
 
-waste <- tar_read(waste, store = here("_targets"))
+waste <- tar_read(waste, store =targets_dir)
 covidestim <- tar_read(covidestim_biweekly_county,
-                        store = here("_targets"))
+                        store =targets_dir)
 
+dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
 
 ```
 
@@ -115,18 +128,22 @@ counties_with_waste <- wjoined %>%
 
 
 versions <- tibble(
-  version = c("v1", "v2", "v3", "v4"),
+  version = c("v1", "v2", "v3", "v4", "v5", "v6"),
   vlabel = factor(
     c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
     "$\\beta$ Centered at Emp. Value",
     "$P(S_1|untested)$ Centered at Emp. Value",
-    "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values"
+    "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
+        "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
     ),
     levels = c(
         "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
         "$\\beta$ Centered at Emp. Value",
          "$P(S_1|untested)$ Centered at Emp. Value",
-        "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values"
+        "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
+        "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
        
     ) )
 )
@@ -140,7 +157,7 @@ w_data <- wjoined %>%
   distinct() %>%
   filter(fips %in% counties_with_waste) %>%
   filter(!is.na(mean_conc)) %>%
-  group_by(fips) %>%
+  group_by(fips, version) %>%
   mutate(mean_conc_std = mean_conc/ max(mean_conc),
          exp_cases_median_std = exp_cases_median / max(exp_cases_median),
          exp_cases_lb_std = exp_cases_lb /max(exp_cases_median),
@@ -154,9 +171,34 @@ w_data <- wjoined %>%
 
 # Correlations 
 
-For each county, normalize the wastewater concentration by the maximum concentration for that county and the probabilistic bias counts by the maximum *median* estimated counts for that county (2.5th percentile and 97.5th percentile also standardized by the maximum *median* estimated counts for that county).
+## Normalization Strategy 1: By Values at Biweek Where Wastewater Concentration is Maximized
 
-## Wastewater
+
+```{r}
+
+
+w_data <- wjoined %>% 
+  select(-date) %>%
+  distinct() %>%
+  filter(fips %in% counties_with_waste) %>%
+  filter(!is.na(mean_conc)) %>%
+  group_by(fips, version) %>%
+  mutate(mean_conc_std = mean_conc/ max(mean_conc),
+         max_conc = max(mean_conc),
+         exp_cases_median_std = exp_cases_median / exp_cases_median[which.max(mean_conc)],
+         exp_cases_lb_std = exp_cases_lb /exp_cases_median[which.max(mean_conc)],
+         exp_cases_ub_std = exp_cases_ub / exp_cases_median[which.max(mean_conc)],
+         infections_std  = infections/ infections[which.max(mean_conc)],
+         positive_std = positive/max(positive)) %>%
+  ungroup()
+
+
+
+```
+
+
+
+### PB Counts and Wastewater
 
 ```{r}
 
@@ -166,7 +208,7 @@ correlations <- w_data %>%
   group_by(version) %>%
   summarize(Correlation = cor(exp_cases_median_std,mean_conc_std),
             vlabel =unique(vlabel)) %>%
-  mutate(x=1.3,
+  mutate(x=1.8,
          y=.1)
 
 w_data %>%
@@ -182,6 +224,7 @@ w_data %>%
                                       round(Correlation,3))), 
                 data= correlations ) +
   facet_wrap(~vlabel,
+             ncol=2,
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
@@ -189,9 +232,33 @@ w_data %>%
        y = "Mean Wastewater Concentration\n(Standardized)",
        title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
 
+
+plt_wastewater_pb <- w_data %>%
+  group_by(version) %>%
+  ggplot(aes(x=exp_cases_median_std, y = mean_conc_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = mean_conc_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= correlations ) +
+  facet_wrap(~vlabel,
+             ncol=1,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Mean Wastewater Concentration\n(Standardized)",
+       title = "")
+
+  
+  
 ```
 
-## Covidestim
+### PB Counts and Covidestim
 
 
 ```{r}
@@ -205,7 +272,7 @@ covidestim_correlations <- w_data %>%
   # missing values are handled by casewise deletion
   summarize(Correlation = cor(exp_cases_median_std,infections_std,
                               use = "complete.obs")) %>%
-  mutate(x=1.3,
+  mutate(x=1.8,
          y=.1)
 
 
@@ -222,6 +289,7 @@ w_data %>%
                                       round(Correlation,3))), 
                 data= covidestim_correlations ) +
   facet_wrap(~vlabel,
+              ncol=2,
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
@@ -230,11 +298,40 @@ w_data %>%
        title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
 
 
+plt_covidestim_pb <- w_data %>%
+  ggplot(aes(x=exp_cases_median_std, y = infections_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = infections_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= covidestim_correlations ) +
+  facet_wrap(~vlabel,
+              ncol=1,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Covidestim Estimates\n(Standardized)",
+       title = "")
+
+
 ```
 
 
+### Combined Figure
 
-## Covidestim and Wastewater
+```{r, fig.height=10, fig.width=10}
+
+cowplot::plot_grid(plt_wastewater_pb, plt_covidestim_pb, ncol=2)
+
+```
+
+
+### Covidestim and Wastewater
 
 
 ```{r}
@@ -244,7 +341,7 @@ covidestim_correlations <- w_data %>%
   # missing values are handled by casewise deletion
   summarize(Correlation = cor(mean_conc_std,infections_std,
                               use = "complete.obs")) %>%
-  mutate(x=1.3,
+  mutate(x=1,
          y=.1) 
 
 
@@ -257,9 +354,6 @@ w_data %>%
            aes(x=x,y=y,  label=paste0("Correlation: ", 
                                       round(Correlation,3))), 
                 data= covidestim_correlations ) +
-  facet_wrap(~vlabel,
-             labeller= as_labeller(TeX, 
-                                   default = label_parsed)) +
   theme_c() +
   labs(x = "Covidestim Estimates\n(Standardized)",
        y = "Wastewater Concentrations\n(Standardized)",
@@ -273,7 +367,278 @@ pb_correlations <- w_data %>%
   # missing values are handled by casewise deletion
   summarize(Correlation = cor(positive_std,mean_conc_std,
                               use = "complete.obs")) %>%
-  mutate(x=1.3,
+  mutate(x=1.8,
+         y=.1) 
+
+
+
+
+
+
+```
+
+### Compare to Wastewater Over Time 
+
+```{r,fig.width=12, fig.height=15}
+
+library(scales)
+
+pal <- c("#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
+
+names(pal) <- c(#"$observed$", 
+                '$P(S_1|untested)$ Centered at Emp. Value',
+                '$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values',
+               "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$",
+               "$\\beta$ Centered at Emp. Value"
+               )
+
+
+waste_df <- w_data %>%
+  select(biweek, mean_conc_std, name) %>%
+  distinct() %>%
+  left_join(dates,relationship = "many-to-many" ) %>%
+  group_by(name, biweek) %>%
+  # center date within 2-week interval
+  summarize(date = min(date) + days(7),
+            mean_conc_std=unique(mean_conc_std)) %>%
+  mutate(name = gsub("County, MA", "", name))
+
+
+w_data%>%
+  mutate(name = gsub("County, MA", "", name)) %>%
+  left_join(dates,relationship = "many-to-many" ) %>%
+  filter(version %in% c("v1","v3")) %>%
+  filter(biweek>=6) %>%
+  group_by(biweek) %>%
+  mutate(mindate = min(date),
+         maxdate=max(date)) %>%
+  ungroup() %>% 
+ #   filter(fips == county_fips  & date >= begin_date & date <= end_date) %>%
+    ggplot() +
+      geom_ribbon(aes(x = date, 
+                 ymin = exp_cases_lb_std,
+                 ymax = exp_cases_ub_std,
+                 fill = vlabel),
+                 alpha = .5) +
+      geom_line(data = waste_df,
+                aes(x = date, y =mean_conc_std, 
+                    color = 'Wastewater Effective Concentrations'),
+               # color = "#DB4048",
+                size = 1.1) +
+      geom_linerange(aes(xmin = mindate, 
+                         xmax = maxdate, 
+                         y = infections_std,
+                         color = 'Covidestim Infection Estimates')) + 
+      geom_point(data = waste_df,
+                aes(x = date, y =mean_conc_std ),
+                color = "#DB4048",
+                alpha = .5,
+                size = 1.2) +
+      facet_grid(name~vlabel, 
+                 labeller=labeller(vlabel =as_labeller(
+                   TeX, default=label_parsed))) +
+      scale_fill_manual(values = pal, labels = c('','','',''), 
+                        name = "Probabilistic Bias Intervals") +
+      theme_bw() +
+     theme_c() +
+      labs(y = "Value (Standardized)",
+           title = "",
+           x= "") +
+      scale_x_date(date_labels = "%b %Y") +
+    scale_color_manual(
+      name = '', 
+      values = c(
+        'Covidestim Infection Estimates' = 'darkblue',
+        'Wastewater Effective Concentrations' = '#DB4048')) +
+    guides(color = guide_legend(override.aes = list(size = 12,
+                                                    linewidth=3)),
+           fill = guide_legend(override.aes =list(size = 6)))
+
+
+
+```
+
+
+
+
+
+
+
+
+
+## Normalization Strategy 2: By Maximum (Separately)
+
+For each county, normalize the wastewater concentration by the maximum concentration for that county and the probabilistic bias counts by the maximum *median* estimated counts for that county (2.5th percentile and 97.5th percentile also standardized by the maximum *median* estimated counts for that county).
+
+### PB Counts and Wastewater
+
+```{r}
+
+# correlations between PB counts and wastewater concentrations
+
+correlations <- w_data %>%
+  group_by(version) %>%
+  summarize(Correlation = cor(exp_cases_median_std,mean_conc_std),
+            vlabel =unique(vlabel)) %>%
+  mutate(x=1.8,
+         y=.1)
+
+w_data %>%
+  group_by(version) %>%
+  ggplot(aes(x=exp_cases_median_std, y = mean_conc_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = mean_conc_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= correlations ) +
+  facet_wrap(~vlabel,
+             ncol=2,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Mean Wastewater Concentration\n(Standardized)",
+       title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
+
+
+
+plt_wastewater_pb <- w_data %>%
+  group_by(version) %>%
+  ggplot(aes(x=exp_cases_median_std, y = mean_conc_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = mean_conc_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= correlations ) +
+  facet_wrap(~vlabel,
+             ncol=1,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Mean Wastewater Concentration\n(Standardized)",
+       title = "")
+
+
+
+```
+
+### PB Counts and Covidestim
+
+
+```{r}
+
+# correlations between PB counts and Covidestim estimates
+
+
+covidestim_correlations <- w_data %>%
+  filter(!is.na(infections_std)) %>%
+  group_by(vlabel) %>%
+  # missing values are handled by casewise deletion
+  summarize(Correlation = cor(exp_cases_median_std,infections_std,
+                              use = "complete.obs")) %>%
+  mutate(x=1.8,
+         y=.1)
+
+
+
+w_data %>%
+  ggplot(aes(x=exp_cases_median_std, y = infections_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = infections_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= covidestim_correlations ) +
+  facet_wrap(~vlabel,
+             ncol=2,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Covidestim Estimates\n(Standardized)",
+       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+
+
+plt_covidestim_pb <- w_data %>%
+  ggplot(aes(x=exp_cases_median_std, y = infections_std)) +
+  geom_point(alpha=.5) +
+  geom_linerange(aes(xmin = exp_cases_lb_std,
+                     xmax=exp_cases_ub_std, 
+                     y = infections_std),
+                 alpha = .3) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= covidestim_correlations ) +
+  facet_wrap(~vlabel,
+              ncol=1,
+             labeller= as_labeller(TeX, 
+                                   default = label_parsed)) +
+  theme_c() +
+  labs(x = "Probabilistic Bias Counts\n(Standardized)",
+       y = "Covidestim Estimates\n(Standardized)",
+       title = "")
+```
+
+
+### Combined Figure
+
+```{r, fig.height=10, fig.width=10}
+
+cowplot::plot_grid(plt_wastewater_pb, plt_covidestim_pb, ncol=2)
+
+```
+
+
+### Covidestim and Wastewater
+
+
+```{r}
+
+covidestim_correlations <- w_data %>%
+  filter(version=="v1") %>%
+  # missing values are handled by casewise deletion
+  summarize(Correlation = cor(mean_conc_std,infections_std,
+                              use = "complete.obs")) %>%
+  mutate(x=1,
+         y=.1) 
+
+
+
+w_data %>%
+  filter(version=="v1") %>%
+  ggplot(aes(x=infections_std, y = mean_conc_std)) +
+  geom_point(alpha=.5) +
+  geom_text(
+           aes(x=x,y=y,  label=paste0("Correlation: ", 
+                                      round(Correlation,3))), 
+                data= covidestim_correlations ) +
+  theme_c() +
+  labs(x = "Covidestim Estimates\n(Standardized)",
+       y = "Wastewater Concentrations\n(Standardized)",
+       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+
+
+
+
+pb_correlations <- w_data %>%
+  filter(version=="v1") %>%
+  # missing values are handled by casewise deletion
+  summarize(Correlation = cor(positive_std,mean_conc_std,
+                              use = "complete.obs")) %>%
+  mutate(x=1,
          y=.1) 
 
 

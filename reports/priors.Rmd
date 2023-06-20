@@ -21,7 +21,7 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
 library(tidyverse)
 library(targets)
 library(here)
-
+library(latex2exp)
 
 # read priors from target
 prior_params <- tar_read(prior_params,
@@ -56,7 +56,7 @@ theme_c <- function(...){
       
       axis.text.x = element_text(              #axis text
                    size = 12),
-      legend.text = element_text(size = 18),
+      legend.text = element_text(size = 14),
       # t, r, b, l
       plot.margin = unit(c(1,.5,.5,.5), "cm"),
       legend.position = "right",
@@ -199,7 +199,10 @@ ctis_smoothed <- tar_read(ctis_smoothed,store = here("_targets"))
 
 ```
 
-```{r}
+## $\beta$
+
+
+```{r beta-smoothing, fig.cap="The ratio of the screening test positivity over the overall test positivity from the COVID-19 Trends and Impact Survey is taken to be the estimate of $\\beta$. We compare two approaches to smoothing: cubic spline smoothing with 2 knots (July 15th, 2021 and December 1st, 2021) to LOESS smoothing with a span of 0.33."}
 
 ctis_smoothed  %>%
   filter(keep) %>%
@@ -233,13 +236,64 @@ ctis_smoothed  %>%
          color = guide_legend(override.aes = list(linewidth = 3,
                                                   alpha = c("LOESS smoothed" = .9, 
                             "Spline smoothed" = .9, 
-                              "Survey Value"=.3)))) +
-  theme_c() +
+                              "Survey Value"=.3)),
+                            nrow=3)) +
+  theme_c(legend.position="top") +
   ylim(0,1) +
   scale_x_date(date_breaks="3 months",
-               date_labels = "%b %Y")
+               date_labels = "%b %Y") + 
+  labs(y = TeX("Survey Estimate of $\\beta$"),
+       x= "",
+       title = TeX("Comparing Approaches for Smoothing Survey Estimates of $\\beta$"))
 
 
 
 ```
+
+
+## $\Pr(S_1 | \text{untested})$
+
+
+
+```{r s-untested-smoothing, fig.cap="The percentage of the population experiencing COVID-19-like illness is taken to be the estimate of $\\Pr(S_1|\\text{untested}). The LOESS smoothed estimate with a span of 0.2 is shown in red."}
+
+ctis_smoothed  %>%
+  mutate(state=toupper(state)) %>%
+  select(date,
+         state, 
+         contains("s_untested")) %>%
+  pivot_longer(contains("s_untested")) %>%
+  mutate(name = case_when(
+    name == "s_untested_smoothed" ~ "LOESS smoothed",
+    name == "imputed_s_untested" ~ "Survey Value"
+  )) %>%
+  ggplot(aes(x=date, y=value, color = name, 
+             alpha = name, linewidth=name)) +
+  geom_line() +
+  facet_wrap(~state, ncol=5) +
+  scale_alpha_manual(values=c("LOESS smoothed" = .9, 
+                              "Survey Value"=.6),
+                     name='') +
+  scale_linewidth_manual(values = c("LOESS smoothed" = 1.02, 
+                              "Survey Value"=.9)) +
+  scale_color_manual(values=c("Survey Value" ="black", "LOESS smoothed"="darkred"),
+                     name ='') +
+  guides(alpha="none",
+         linewidth="none",
+         color = guide_legend(override.aes = list(
+           linewidth = 3,
+           alpha = c("LOESS smoothed" = .9, 
+                     "Survey Value"=.3)),
+                            nrow=3)) +
+  theme_c(legend.position="top") +
+  scale_x_date(date_breaks="3 months",
+               date_labels = "%b %Y") + 
+  labs(y = TeX("Survey Estimate of $Pr(S_1|untested)$"),
+       x= "",
+       title = TeX("Comparing Approaches for Smoothing Survey Estimates of $Pr(S_1|untested)$"))
+
+
+
+```
+
 
