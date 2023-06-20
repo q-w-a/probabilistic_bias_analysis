@@ -1,0 +1,267 @@
+---
+title: "State Results"
+author: "Quinn White"
+date: "`r Sys.Date()`"
+output:
+  rmdformats::readthedown:
+    df_print: paged
+    code_folding: hide
+    css: !expr here::here('css/template.css')
+  html_document:
+    df_print: paged
+    toc-depth: 4
+knit: (function(input, ...) {
+    rmarkdown::render(
+      input,
+      output_dir = "../output_html")})
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
+
+library(tidyverse)
+library(targets)
+library(here)
+library(latex2exp)
+
+```
+
+```{r load-data}
+
+
+# clear labels for versions
+versions <- tibble(
+  version = c("v1", "v2", "v3", "v4", "v5", "v6"),
+  vlabel = factor(
+    c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+    "$\\beta$ Centered at Emp. Value",
+    "$P(S_1|untested)$ Centered at Emp. Value",
+    "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
+        "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
+    ),
+    levels = c(
+        "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+        "$\\beta$ Centered at Emp. Value",
+         "$P(S_1|untested)$ Centered at Emp. Value",
+        "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
+        "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
+       
+    ) )
+)
+
+
+# read state-level results
+targets_dir <- here("_targets_6_19")
+
+state_res <- tar_read(state_v1, 
+                   store =targets_dir) %>% 
+  mutate(version = "v1") %>%
+  bind_rows(
+    tar_read(state_v2,
+             store =targets_dir)
+  ) %>%
+   bind_rows(
+    tar_read(state_v3, 
+             store =targets_dir)
+  ) %>%
+   bind_rows(
+    tar_read(state_v4, 
+             store =targets_dir)
+   )
+  # )%>%
+  #  bind_rows(
+  #   tar_read(state_v5, 
+  #            store =targets_dir)
+  # )%>%
+  #  bind_rows(
+  #   tar_read(state_v6, 
+  #            store =targets_dir)
+  # )
+
+covidestim <- tar_read(covidestim_biweekly_state,
+                        store =targets_dir)
+
+dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
+codes <- read_csv(here('data/demographic/statecodes.csv'))
+
+
+
+state_res <- state_res %>%
+  rename(state=fips) %>%
+  left_join(versions) %>%
+  mutate(state=toupper(state)) %>%
+  left_join(covidestim, relationship= "many-to-many") %>%
+  left_join(dates, relationship = "many-to-many") 
+
+
+
+
+
+```
+
+```{r theme_c}
+
+theme_c <- function(...){ 
+   # font <- "Helvetica"   #assign font family up front
+    theme_bw() %+replace%    #replace elements we want to change
+    
+    theme(
+      
+      
+      #text elements
+      plot.title = element_text(             #title
+                   size = 16,                #set font size
+                   face = 'bold',            #bold typeface
+                   hjust = .5,
+                   vjust = 3),               
+      
+      plot.subtitle = element_text(          #subtitle
+                   size = 12,
+                   hjust = .5,
+                   face = 'italic',
+                   vjust = 3),               #font size
+      
+      axis.title = element_text(             #axis titles
+                   size = 12),               #font size
+      
+      axis.text = element_text(              #axis text
+                   size = 9),
+      legend.text = element_text(size = 12),
+      # t, r, b, l
+      plot.margin = unit(c(1,.5,.5,.5), "cm"),
+      legend.position = "right",
+      strip.text.x = element_text(size = 11, face = "bold", color="white"),
+      strip.text.y = element_text(size = 11, face = "bold", color="white",angle=270),
+      strip.background = element_rect(fill = "#3E3D3D")
+      ) %+replace%
+      theme(...)
+   
+}
+
+```
+
+
+
+# Summarizing Concordance with Covidestim
+
+
+
+```{r,fig.width=11}
+
+# corrected %>%
+#   mutate(in_interval = case_when(
+#     exp_cases_lb <= infections & infections <= exp_cases_ub ~ "In Interval",
+#     exp_cases_lb  > infections  ~ "Below Interval",
+#     exp_cases_ub < infections ~ "Above Interval"
+#   )) %>%
+#   filter(!is.na(in_interval)) %>%
+#   group_by(in_interval, state, vlabel) %>%
+#   summarize(n_per_county=n()) %>%
+#   group_by(vlabel, in_interval) %>%
+#   summarize(n_per_version = sum(n_per_county)) %>%
+#   group_by(vlabel) %>%
+#   mutate(total = sum(n_per_version)) %>%
+#   ungroup() %>%
+#   mutate(prop=n_per_version/total)
+
+
+
+by_version <- state_res %>%
+  select(-date) %>%
+  distinct() %>% 
+  mutate(in_interval = case_when(
+    exp_cases_lb <= infections & infections <= exp_cases_ub ~ "In Interval",
+    exp_cases_lb  > infections  ~ "Below Interval",
+    exp_cases_ub < infections ~ "Above Interval"
+  )) %>%
+  filter(!is.na(in_interval)) %>%
+  group_by(in_interval, vlabel) %>%
+  summarize(n=n()) %>%
+  group_by(vlabel) %>%
+  mutate(total = sum(n)) %>%
+  mutate(prop=n/total) 
+
+labels <- by_version %>%
+  arrange(prop) %>%
+  pull(vlabel) %>%
+  as.character() %>%
+  unique()
+
+
+by_version %>%
+  mutate(in_interval = factor(in_interval, 
+                             levels = c("Above Interval",
+                                        "In Interval",
+                                        "Below Interval"
+                                        ))) %>%
+   ggplot(aes(x= fct_reorder(vlabel,prop,max), 
+             fill = in_interval, y =prop)) + 
+  geom_bar(stat="identity",position="stack") +
+  theme_c() +
+  coord_flip()+ scale_fill_manual(values=c("In Interval" = "#79D2AF",
+                             "Above Interval" = "#D2AF79",
+                      "Below Interval"="#7997D2"),
+                       breaks = c("Below Interval",
+                               "In Interval",
+                               "Above Interval")) +
+  labs(x="", 
+       y= "Proportion",
+       fill = "Covidestim Median:",
+       title = "Proportion Where Covidestim Median\nWas Within, Above, or Below the Median",
+       subtitle = "Including All States") +
+  theme_c() +
+#  viridis::scale_fill_viridis(option="mako", begin=.2, discrete=TRUE) +
+  theme_c(legend.position="right",
+          legend.title = element_text(face="bold", size = 15),
+          legend.text= element_text( size = 15),
+          legend.spacing.y = unit(3, 'pt'),
+          axis.text.y = element_text(size = 17, hjust=1)) +
+  theme(
+          plot.subtitle = element_text(size=18, 
+                                       face='italic', 
+                                       margin=margin(4,0,4,0))) +
+  scale_x_discrete(labels = (TeX(labels)))
+
+
+
+```
+
+
+# Ratio of Estimated to Observed During Omicron 
+
+
+```{r,results='hide', fig.height=11,fig.width=8}
+
+subset <- state_res %>%
+  filter(vlabel == "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$")
+
+subset %>% 
+  left_join(codes) %>%
+  filter(biweek == 27) %>%
+  pull(date) %>% 
+  range()
+
+subset %>% 
+  left_join(codes) %>%
+  filter(biweek == 27) %>%
+  ggplot(aes(y =fct_reorder(state_name,exp_cases_median/positive),
+             xmin = exp_cases_lb/positive,
+             xmax = exp_cases_ub/positive)) +
+  geom_errorbar() +
+  # geom_point(aes(y=state_name,x=exp_cases_median/positive),
+  #            color = "darkred", size=.8, alpha=.5) +
+  theme_c() + 
+  theme(axis.text.y=element_text(size=15),
+        axis.text.x = element_text(size=13),
+        axis.title = element_text(size = 18),
+        plot.subtitle = element_text(size=14)) +
+  labs(y="", x="Ratio of Estimated Infections to Observed",
+       title ="Ratio of Estimated Infections to Observed Infections\nDuring Omicron",
+       subtitle = "December 31, 2021 through January 14, 2022")
+
+
+```
+
+
