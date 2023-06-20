@@ -2,7 +2,7 @@
 
 
 #---------- Version 1 -------------
-get_v1_state <- function(data, params, testing = FALSE) {
+get_v1_state <- function(data, params, testing = TRUE) {
   
   state_testing <- data
   
@@ -145,7 +145,7 @@ get_smoothed_ctis <- function(ctis_raw,
 get_corrected_state <- function(data, params,
                                 ctis, vary, 
                                 spline=FALSE,
-                                testing = FALSE) {
+                                testing = TRUE) {
   
   dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
   
@@ -172,7 +172,11 @@ get_corrected_state <- function(data, params,
            biweek, 
            s_untested_smoothed, 
            beta_estimate_smoothed,
-           keep) 
+           beta_estimate_spline_smoothed,
+           keep)  %>%
+    ungroup()
+  
+  glimpse(ctis_biweekly)
     
   state_testing <- state_testing %>% 
   #  mutate(fips = tolower(fips)) %>%
@@ -209,7 +213,7 @@ get_corrected_state <- function(data, params,
   
   if(vary=="s_untested_and_beta" & spline == TRUE) {
     message("v6")
-    corrected <- get_v5_corrected(state_testing, params) %>%
+    corrected <- get_v6_corrected(state_testing, params) %>%
       mutate(version="v6") }
   
   
@@ -387,8 +391,11 @@ get_v4_corrected <- function(state_testing, params) {
 # at survey estimate (loess smoothed) 
 get_v5_corrected <- function(state_testing, params) {
   
-  message("Running version 5")
+  glimpse(state_testing)
+  nrow(state_testing)
   
+  message("Running version 5")
+
   state_testing <- state_testing %>% 
     # only have CTIS data starting at week 6
     # filter out the beginning dates where beta_estimate_smoothed is NA
@@ -407,6 +414,7 @@ get_v5_corrected <- function(state_testing, params) {
                       posrate,
                       population,
                       beta_estimate_smoothed,
+                      beta_estimate_spline_smoothed,
                       s_untested_smoothed,
                       ...) {
       
@@ -414,9 +422,14 @@ get_v5_corrected <- function(state_testing, params) {
                            total,  biweek,
                            posrate, population,
                            beta_estimate_smoothed,
-                           s_untested_smoothed)
+                           s_untested_smoothed,
+                           beta_estimate_spline_smoothed)
       # message(paste0("before: ",prior_params$beta_mean))
       params$beta_mean <- state_data$beta_estimate_spline_smoothed
+      
+      message(paste0("v5 beta mean: ", params$beta_mean ))
+      
+      
       # params$s_untested_mean <- state_data$s_untested_smoothed
       # message(paste0("after: ",prior_params$beta_mean))
       res <- do.call(get_melded, params)
@@ -464,17 +477,26 @@ get_v6_corrected <- function(state_testing, params) {
                       population,
                       beta_estimate_smoothed,
                       s_untested_smoothed,
+                      beta_estimate_spline_smoothed,
                       ...) {
       
       state_data <- tibble(fips, positive, 
                            total,  biweek,
                            posrate, population,
                            beta_estimate_smoothed,
+                           beta_estimate_spline_smoothed,
                            s_untested_smoothed)
       # message(paste0("before: ",prior_params$beta_mean))
       params$beta_mean <- state_data$beta_estimate_spline_smoothed
       params$s_untested_mean <- state_data$s_untested_smoothed
       # message(paste0("after: ",prior_params$beta_mean))
+      
+      
+      message(paste0("v6 beta mean: ", params$beta_mean ))
+      message(paste0("v6 s_untested mean: ", params$s_untested_mean ))
+      
+      
+      
       res <- do.call(get_melded, params)
       constrained <- res$post_melding
       

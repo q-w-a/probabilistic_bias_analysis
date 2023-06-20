@@ -61,6 +61,7 @@ get_ctis_biweekly <- function(ctis) {
            biweek, 
            s_untested_smoothed, 
            beta_estimate_smoothed,
+           beta_estimate_spline_smoothed,
            keep) 
   
   return(ctis_biweekly)
@@ -97,17 +98,17 @@ get_corrected_county <- function(data, params, ctis,
   
   if(vary=="beta" & spline == FALSE) {
     message("v2")
-    corrected <- get_v2_corrected(county_testing, params) %>%
+    corrected <- get_v2_county_corrected(county_testing, params) %>%
       mutate(version="v2") }
   
   if(vary=="s_untested" & spline == FALSE) {
     message("v3")
-    corrected <- get_v3_corrected(county_testing, params) %>%
+    corrected <- get_v3_county_corrected(county_testing, params) %>%
       mutate(version="v3") }
   
   if(vary=="s_untested_and_beta" & spline == FALSE) {
     message("v4")
-    corrected <- get_v4_corrected(county_testing, params) %>%
+    corrected <- get_v4_county_corrected(county_testing, params) %>%
       mutate(version="v4") }
   
   ###########################
@@ -116,12 +117,12 @@ get_corrected_county <- function(data, params, ctis,
   
   if(vary=="beta" & spline == TRUE) {
     message("v5")
-    corrected <- get_v5_corrected(county_testing, params) %>%
+    corrected <- get_v5_county_corrected(county_testing, params) %>%
       mutate(version="v5") }
   
   if(vary=="s_untested_and_beta" & spline == TRUE) {
     message("v6")
-    corrected <- get_v6_corrected(county_testing, params) %>%
+    corrected <- get_v6_county_corrected(county_testing, params) %>%
       mutate(version="v6") }
   
 
@@ -133,7 +134,7 @@ get_corrected_county <- function(data, params, ctis,
 
 #---------- Version 2 -------------
 # center prior for beta at survey estimates 
-get_v2_corrected <- function(county_testing, params) {
+get_v2_county_corrected <- function(county_testing, params) {
   
   message("Running version 2")
   
@@ -186,7 +187,7 @@ get_v2_corrected <- function(county_testing, params) {
 
 #---------- Version 3 -------------
 # center prior for P(S_1|untested) at survey estimates 
-get_v3_corrected <- function(county_testing, params) {
+get_v3_county_corrected <- function(county_testing, params) {
   
   message("Running version 3")
   
@@ -243,7 +244,7 @@ get_v3_corrected <- function(county_testing, params) {
 
 #---------- Version 4 -------------
 # center prior for BOTH beta and P(S_1|untested) at survey estimates 
-get_v4_corrected <- function(county_testing, params) {
+get_v4_county_corrected <- function(county_testing, params) {
   
   message("Running version 4")
   
@@ -299,7 +300,7 @@ get_v4_corrected <- function(county_testing, params) {
 
 #---------- Version 5 -------------
 # center prior for BOTH beta and P(S_1|untested) at survey estimates 
-get_v5_corrected <- function(county_testing, params) {
+get_v5_county_corrected <- function(county_testing, params) {
   
   message("Running version 5")
   
@@ -321,6 +322,7 @@ get_v5_corrected <- function(county_testing, params) {
                       posrate,
                       population,
                       beta_estimate_smoothed,
+                      beta_estimate_spline_smoothed,
                       s_untested_smoothed,
                       ...) {
       
@@ -328,10 +330,13 @@ get_v5_corrected <- function(county_testing, params) {
                            total,  biweek,
                            posrate, population,
                            beta_estimate_smoothed,
+                           beta_estimate_spline_smoothed,
                            s_untested_smoothed)
       # message(paste0("before: ",prior_params$beta_mean))
       # params$s_untested_mean <- state_data$s_untested_smoothed
       params$beta_mean <- state_data$beta_estimate_spline_smoothed
+      
+      message(paste0("v5 beta mean: ", params$beta_mean ))
       
       # message(paste0("after: ",prior_params$beta_mean))
       res <- do.call(get_melded, params)
@@ -356,7 +361,7 @@ get_v5_corrected <- function(county_testing, params) {
 
 #---------- Version 6 -------------
 # center prior for BOTH beta (spline smoothed) and loess-smoothed P(S_1|untested) at survey estimates 
-get_v6_corrected <- function(county_testing, params) {
+get_v6_county_corrected <- function(county_testing, params) {
   
   message("Running version 6")
   
@@ -378,6 +383,7 @@ get_v6_corrected <- function(county_testing, params) {
                       posrate,
                       population,
                       beta_estimate_smoothed,
+                      beta_estimate_spline_smoothed,
                       s_untested_smoothed,
                       ...) {
       
@@ -385,10 +391,15 @@ get_v6_corrected <- function(county_testing, params) {
                            total,  biweek,
                            posrate, population,
                            beta_estimate_smoothed,
+                           beta_estimate_spline_smoothed,
                            s_untested_smoothed)
       # message(paste0("before: ",prior_params$beta_mean))
       params$s_untested_mean <- state_data$s_untested_smoothed
       params$beta_mean <- state_data$beta_estimate_spline_smoothed
+      
+      message(paste0("v6 beta mean: ", params$beta_mean ))
+      message(paste0("v6 s_untested mean: ", params$s_untested_mean ))
+      
       
       # message(paste0("after: ",prior_params$beta_mean))
       res <- do.call(get_melded, params)
