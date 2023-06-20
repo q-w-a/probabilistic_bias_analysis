@@ -23,13 +23,13 @@ See the documentation [here](covidestim.org) for documentation on Covidestim. Ta
 
 * `tests_biweekly_state`: PCR test results at the state-level from healthdata.gov endpoint [here](https://healthdata.gov/dataset/COVID-19-Diagnostic-Laboratory-Testing-PCR-Testing/j8mb-icvb)
     * Columns: 
-      - `state`
-      - `positive` number of positive tests
-      - `total` total number of tests
-      - `date` first date of 2-week interval
-      - `biweek`
-      - `posrate` biweekly positivity rate, `positive`/`total`
-      - `population` census population size for state
+      - `state`:
+      - `positive`: number of positive tests
+      - `total`: total number of tests
+      - `date`: first date of 2-week interval
+      - `biweek`:
+      - `posrate`: biweekly positivity rate, `positive`/`total`
+      - `population`: census population size for state
       
 #### County-level Testing Data
 
