@@ -202,7 +202,7 @@ ctis_smoothed <- tar_read(ctis_smoothed,store = here("_targets"))
 ## $\beta$
 
 
-```{r beta-smoothing, fig.cap="The ratio of the screening test positivity over the overall test positivity from the COVID-19 Trends and Impact Survey is taken to be the estimate of $\\beta$. We compare two approaches to smoothing: cubic spline smoothing with 2 knots (July 15th, 2021 and December 1st, 2021) to LOESS smoothing with a span of 0.33."}
+```{r beta-smoothing, fig.cap="The ratio of the screening test positivity over the overall test positivity from the COVID-19 Trends and Impact Survey is taken to be the estimate of $\\beta$. We compare two approaches to smoothing: cubic spline smoothing with 2 knots (July 15th, 2021 and December 1st, 2021) to LOESS smoothing with a span of 0.33.", fig.width=12,fig.height=12}
 
 ctis_smoothed  %>%
   filter(keep) %>%
@@ -255,7 +255,7 @@ ctis_smoothed  %>%
 
 
 
-```{r s-untested-smoothing, fig.cap="The percentage of the population experiencing COVID-19-like illness is taken to be the estimate of $\\Pr(S_1|\\text{untested}). The LOESS smoothed estimate with a span of 0.2 is shown in red."}
+```{r s-untested-smoothing, fig.cap="The percentage of the population experiencing COVID-19-like illness is taken to be the estimate of $\\Pr(S_1|\\text{untested}). The LOESS smoothed estimate with a span of 0.2 is shown in red.",fig.width=12,fig.height=16}
 
 ctis_smoothed  %>%
   mutate(state=toupper(state)) %>%
@@ -270,7 +270,7 @@ ctis_smoothed  %>%
   ggplot(aes(x=date, y=value, color = name, 
              alpha = name, linewidth=name)) +
   geom_line() +
-  facet_wrap(~state, ncol=5) +
+  facet_wrap(~state, ncol=4) +
   scale_alpha_manual(values=c("LOESS smoothed" = .9, 
                               "Survey Value"=.6),
                      name='') +

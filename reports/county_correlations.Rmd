@@ -17,12 +17,13 @@ knit: (function(input, ...) {
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=TRUE)
 
 library(tidyverse)
 library(targets)
 library(here)
 library(latex2exp)
+library(kableExtra)
 
 ```
 
@@ -71,7 +72,7 @@ theme_c <- function(...){
 
 ```{r load-data}
 
-targets_dir <- here("_targets_6_19")
+targets_dir <- here("_targets")
 
 county <- tar_read(ma_v1, 
                    store =targets_dir) %>% 
@@ -87,14 +88,14 @@ county <- tar_read(ma_v1,
    bind_rows(
     tar_read(ma_v4, 
              store =targets_dir)
-  # )%>%
-  #  bind_rows(
-  #   tar_read(ma_v5, 
-  #            store =targets_dir)
-  # )%>%
-  #  bind_rows(
-  #   tar_read(ma_v6, 
-  #            store =targets_dir)
+  )%>%
+   bind_rows(
+    tar_read(ma_v5,
+             store =targets_dir)
+  )%>%
+   bind_rows(
+    tar_read(ma_v6,
+             store =targets_dir)
    )
 
 waste <- tar_read(waste, store =targets_dir)
@@ -324,9 +325,31 @@ plt_covidestim_pb <- w_data %>%
 
 ### Combined Figure
 
-```{r, fig.height=10, fig.width=10}
+```{r, fig.height=10, fig.width=12}
 
 cowplot::plot_grid(plt_wastewater_pb, plt_covidestim_pb, ncol=2)
+
+
+cor_covid <- covidestim_correlations %>% 
+  select(vlabel, 
+         `Correlation with Covidestim Estimates`=Correlation)
+
+cor_waste <- correlations %>% 
+  select(vlabel, 
+         `Correlation with Wastewater Concentrations`=Correlation)
+
+
+cor_waste %>%
+  left_join(cor_covid) %>%
+  mutate(vlabel = gsub(
+    "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+    "Priors Do Not Vary by County and Date",
+    vlabel, fixed=TRUE),vlabel=gsub(" at","\nat", vlabel)) %>%
+  arrange(desc( `Correlation with Wastewater Concentrations`)) %>%
+  rename(Implementation = vlabel) %>%
+  kbl() %>%
+  kable_styling(full_width = TRUE)
+
 
 ```
 
