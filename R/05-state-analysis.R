@@ -2,7 +2,7 @@
 
 
 #---------- Version 1 -------------
-get_v1_state <- function(data, params, testing = TRUE) {
+get_v1_state <- function(data, params, testing = FALSE) {
   
   state_testing <- data
   
@@ -116,7 +116,7 @@ get_smoothed_ctis <- function(ctis_raw,
                                data = .x, 
                                span = smooth_beta_span)
         # 257 corresponds to 2021-12-01
-        spline_smoothed_beta <- lm(imputed_beta ~ splines::bs(index,knots = c(118, 257)), 
+        spline_smoothed_beta <- lm(imputed_beta ~ splines::ns(index,knots = c(118, 257)), 
                                    data = .x )
         
         # include both spline smoothing and loess smoothing for beta
@@ -145,7 +145,7 @@ get_smoothed_ctis <- function(ctis_raw,
 get_corrected_state <- function(data, params,
                                 ctis, vary, 
                                 spline=FALSE,
-                                testing = TRUE) {
+                                testing = FALSE) {
   
   dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
   
@@ -285,6 +285,11 @@ get_v3_corrected <- function(state_testing, params) {
   
   message("Running version 3")
 
+  
+  state_testing <- state_testing %>% 
+    # only have CTIS data starting at week 6
+    # filter out the beginning dates where beta_estimate_smoothed is NA
+    filter(!is.na(beta_estimate_smoothed))
   
   corrected <- state_testing %>% 
     arrange(biweek) %>%
