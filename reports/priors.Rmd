@@ -22,6 +22,7 @@ library(tidyverse)
 library(targets)
 library(here)
 library(latex2exp)
+library(viridis)
 
 # read priors from target
 prior_params <- tar_read(prior_params,
@@ -291,6 +292,71 @@ ctis_smoothed  %>%
   labs(y = TeX("Survey Estimate of $Pr(S_1|untested)$"),
        x= "",
        title = TeX("Comparing Approaches for Smoothing Survey Estimates of $Pr(S_1|untested)$"))
+
+
+
+```
+
+## Distributions of $\beta$ by State
+
+```{r}
+
+# raw ctis data
+
+ctis_raw <- readRDS(here('data/data_raw/ctis_all_states.RDS'))
+
+states_keep <- ctis_smoothed  %>%
+  filter(keep) %>% pull(state) %>% unique()
+
+ctis <- ctis_raw %>%
+  select(signal, state=geo_value, date, value) %>%
+  pivot_wider(names_from=signal, values_from=value) %>%
+  filter(state %in% states_keep) %>%
+  mutate(beta=smoothed_wscreening_tested_positive_14d/
+           smoothed_wtested_positive_14d,
+         state=toupper(state))
+
+```
+
+```{r ctis-by-state, fig.cap ="Since $\\beta$ represents the ratio of $\\Pr(\\text{test}_+|\\text{untested}, S_0)$ to $\\Pr(\\text{test}_+|\\text{tested})$, we estimate $\\beta$ from the COVID-19 Trends and Impact Survey as the ratio of the screening test positivity over the overall test positivity. Here, we consider the 2.5\\% and 97.5\\% percentiles and mean for each state. Most have a mean near $20%$.", fig.width=9}
+
+ctis %>%
+  group_by(state) %>%
+  summarize(median = median(beta, na.rm=TRUE),
+            mean = mean(beta, na.rm=TRUE),
+            q1 = quantile(beta, .025,  na.rm=TRUE),
+            q2 = quantile(beta, .975,  na.rm=TRUE)) %>%
+  ggplot(aes(x= fct_reorder(state, mean, .desc=TRUE),
+             y = mean)) +
+  geom_errorbar(aes(ymin=q1,ymax=q2),width=.2) +
+  geom_point(color="darkred", size=2) +
+  scale_y_continuous(n.breaks=10) +
+  labs(y= TeX("Empirical Estimates of $\\beta$"),
+       x="State",
+       title = TeX("Empirical Estimates of $\\beta$ from the COVID-19 Trends and Impact Survey"),
+       subtitle = "2.7% Percentile, 97.5% Percentile, and Mean By State" ) +
+  theme_c(axis.title=element_text(size=12))
+
+
+ggsave(here("figures/emp-estimate-beta-dist-by-state.pdf"))
+ 
+```
+
+```{r}
+
+
+ctis %>%
+  ggplot(aes(x = beta, fill=state)) +
+  geom_density() +
+  scale_fill_viridis(option="mako", discrete=TRUE) +
+  theme_c()
+
+ctis %>%
+  ggplot(aes(x = beta, fill=state)) +
+  geom_density() +
+  scale_fill_viridis(option="mako", discrete=TRUE) +
+  theme_c() +
+  facet_wrap(~state)
 
 
 
