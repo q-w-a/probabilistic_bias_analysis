@@ -382,7 +382,7 @@ w_data %>%
   theme_c() +
   labs(x = "Covidestim Estimates\n(Standardized)",
        y = "Wastewater Concentrations\n(Standardized)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+       title = "Correlations Between Wastewater Concentrations\nand Covidestim Estimates")
 
 
 
