@@ -1,0 +1,32 @@
+---
+title: "Supplement"
+author: "Quinn White"
+date: "`r Sys.Date()`"
+output:
+  bookdown::pdf_document2:
+    toc: true
+    number_sections: false
+  
+---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+library(knitr)
+library(here)
+
+```
+
+
+# Specification of the Priors
+
+
+```{r ctis-by-state, fig.cap ="Since $\\beta$ represents the ratio of $\\Pr(\\text{test}_+|\\text{untested}, S_0)$ to $\\Pr(\\text{test}_+|\\text{tested})$, we estimate $\\beta$ from the COVID-19 Trends and Impact Survey as the ratio of the screening test positivity over the overall test positivity. Here, we consider the 2.5\\% and 97.5\\% percentiles and mean for each state. Most have a mean near $20%$."}
+
+include_graphics(here("figures/emp-estimate-beta-dist-by-state.pdf"))
+
+```
+
+
+# Sensitivity Analyses 
+

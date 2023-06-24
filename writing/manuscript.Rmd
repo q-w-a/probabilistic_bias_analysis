@@ -1,0 +1,41 @@
+---
+title: "Approximating the Number of COVID-19 Infections in the United States Across 2021"
+author: "Quinn White"
+date: "`r Sys.Date()`"
+output:
+  bookdown::pdf_document2:
+    toc: false
+    number_sections: false
+  
+---
+
+\newpage 
+
+# Abstract
+
+
+# Introduction
+
+
+# Results
+
+## County Level in Massachusetts
+
+## State-level (1 version)
+
+
+# Methods 
+
+## Data
+
+### Massachusetts County Level
+### State Level
+### Survey Data 
+
+## Statistical Methods
+
+### Probabilistic bias analysis
+
+### Bayesian Melding 
+
+### Specification of Priors 
