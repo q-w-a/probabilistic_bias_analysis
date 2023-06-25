@@ -185,14 +185,19 @@ w_data <- wjoined %>%
   filter(fips %in% counties_with_waste) %>%
   filter(!is.na(mean_conc)) %>%
   group_by(fips, version) %>%
-  mutate(mean_conc_std = (mean_conc - mean(mean_conc))/ 
+  mutate(
+    mean_conc_std = (mean_conc - mean(mean_conc))/ 
            sd(mean_conc),
-         exp_cases_median_std = (exp_cases_median -
-                                   mean(exp_cases_median)/sd(exp_cases_median)),
-         infections_std = (infections - mean(infections))/sd(infections),
-         exp_cases_lb_std = (exp_cases_lb - mean(exp_cases_lb)/ sd(exp_cases_lb)),
-        exp_cases_ub_std = (exp_cases_ub - mean(exp_cases_ub)/ sd(exp_cases_ub)),
-         positive_std = (positive - mean(positive))/sd(positive))  %>%
+    exp_cases_median_std = (exp_cases_median -  mean(exp_cases_median))/
+                                   sd(exp_cases_median),
+         infections_std = (infections - mean(infections))/
+      sd(infections),
+         exp_cases_lb_std = (exp_cases_lb - mean(exp_cases_lb))/
+      sd(exp_cases_lb),
+        exp_cases_ub_std = (exp_cases_ub - mean(exp_cases_ub))/
+      sd(exp_cases_ub),
+         positive_std = (positive - mean(positive))
+    /sd(positive))  %>%
   ungroup()
 
 
@@ -223,7 +228,8 @@ w_data %>%
                      y = mean_conc_std),
                  alpha = .3) +
   geom_text(
-           aes(x=x,y=y,  label=paste0("Correlation: ", 
+           aes(x=x,y=y,  
+               label=paste0("Correlation: ", 
                                       round(Correlation,3))), 
                 data= correlations ) +
   facet_wrap(~vlabel,
@@ -275,7 +281,7 @@ covidestim_correlations <- w_data %>%
   # missing values are handled by casewise deletion
   summarize(Correlation = cor(exp_cases_median_std,infections_std,
                               use = "complete.obs")) %>%
-  mutate(x=1.8,
+  mutate(x=2.5,
          y=.1)
 
 
@@ -998,7 +1004,8 @@ pb_correlations <- w_data %>%
 
 ```{r}
 
-
+wjoined <- wjoined %>%
+  mutate(name = gsub("County, MA","", name))
 
 ma_concordance <- wjoined %>%
   filter(biweek >=6) %>%
@@ -1006,9 +1013,11 @@ ma_concordance <- wjoined %>%
   filter(!grepl("Nantucket", name )) %>%
   select(-date) %>%
   distinct() %>%
-  select(exp_cases_lb, exp_cases_ub, name, biweek, vlabel, infections) %>%
+  select(exp_cases_lb, exp_cases_ub,
+         name, biweek, vlabel, infections) %>%
   mutate(in_interval = case_when(
-    exp_cases_lb <= infections & infections <= exp_cases_ub ~ "In Interval",
+    exp_cases_lb <= infections & 
+      infections <= exp_cases_ub ~ "In Interval",
     exp_cases_lb  > infections  ~ "Below Interval",
     exp_cases_ub < infections ~ "Above Interval"
   ) ) %>%
@@ -1021,6 +1030,34 @@ ma_concordance <- wjoined %>%
   ungroup() %>%
   mutate(prop=n_per_version/total)
 
+
+
+ma_concordance_by_county <- wjoined %>%
+  filter(biweek >=6) %>%
+  # covidestim does not report estimates for Nantucket 
+  filter(!grepl("Nantucket", name )) %>%
+  select(-date) %>%
+  mutate(name = gsub("$", "", 
+                            name, fixed=TRUE)) %>%
+  select(exp_cases_lb, exp_cases_ub, 
+         name, biweek, vlabel, infections) %>%
+   distinct() %>%
+  mutate(in_interval = case_when(
+    exp_cases_lb <= infections & 
+      infections <= exp_cases_ub ~ "In Interval",
+    exp_cases_lb  > infections  ~ "Below Interval",
+    exp_cases_ub < infections ~ "Above Interval"
+  ) ) %>%
+  group_by(in_interval, name, vlabel) %>%
+  summarize(n_per_county=n()) %>%
+  group_by(name,vlabel) %>%
+  mutate(total = sum(n_per_county),
+         prop = n_per_county/total) %>%
+  mutate(state="MA") %>%
+  ungroup()
+
+
+
 ```
 
 
@@ -1028,20 +1065,17 @@ ma_concordance <- wjoined %>%
 
 ```{r}
 
-ma_concordance_by_county %>%
-  filter(vlabel=="$P(S_1|untested)$ Centered at Emp. Value")
-
 ##############################################
 # stacked bar chart of concordance by county
 ##############################################
 ma_concordance_by_county %>%
   filter(vlabel=="$P(S_1|untested)$ Centered at Emp. Value") %>%
-  group_by(county_name) %>%
+  group_by(name) %>%
   mutate(m = prop[which(in_interval=="In Interval")]) %>%
   ungroup() %>%
   mutate(in_interval = factor(in_interval, levels = c("Above Interval",
                             "In Interval", "Below Interval"))) %>%
-  ggplot(aes(x= fct_reorder(county_name,m), 
+  ggplot(aes(x= fct_reorder(name,m), 
              fill = (in_interval), y =prop)) + 
   geom_bar(stat="identity",position="stack") +
   theme_c() +
@@ -1068,8 +1102,9 @@ ma_concordance_by_county %>%
 ## Concordance by Version
 
 
-```{r}
+```{r, fig.width=15}
 
+# 
 in_interval <- ma_concordance %>%
   filter(in_interval == "In Interval") %>%
   mutate(n_interval = n_per_version) %>%
@@ -1122,6 +1157,27 @@ ma_concordance %>%
   scale_x_continuous(n.breaks = 7,
                      expand=c(0,0),
                      limits=c(-.05,1))
+
+
+ma_concordance %>%
+  group_by(vlabel) %>%
+  mutate(total=sum(n_per_version)) %>%
+  filter(in_interval == "In Interval") %>%
+  mutate(n_interval = n_per_version) %>%
+  ggplot(aes(y=fct_reorder(vlabel,prop), x=prop)) +
+  geom_text(aes(label=round(prop,3), x= prop+.03), 
+             angle=0) +
+  geom_bar(stat="identity", fill="#596281") +
+  scale_y_discrete(breaks= unique(ma_concordance$vlabel),
+                   labels=function(x)TeX(x)) +
+  scale_x_continuous(expand=c(0,0), 
+                     limits=c(0,.9), n.breaks=7)  +
+  theme_c() +
+  labs(y="",
+       x="Proportion Containing the Covidestim Median",
+       title="Proportion Containing the Covidestim Median\nBy Implementation")
+
+ 
 
 
 ```
