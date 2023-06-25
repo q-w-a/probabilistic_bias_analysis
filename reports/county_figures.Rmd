@@ -1,5 +1,5 @@
 ---
-title: "County Results"
+title: "County Figures"
 author: "Quinn White"
 date: "`r Sys.Date()`"
 output:
@@ -231,8 +231,8 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Mean Wastewater Concentration\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
 
 
@@ -253,8 +253,8 @@ plt_wastewater_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Mean Wastewater Concentration\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "")
 
   
@@ -296,8 +296,8 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Covidestim Estimates\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Covidestim Estimates\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
 
 
@@ -317,8 +317,8 @@ plt_covidestim_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Covidestim Estimates\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Covidestim Estimates\n(Standardized by County)",
        title = "")
 
 
@@ -380,8 +380,8 @@ w_data %>%
                                       round(Correlation,3))), 
                 data= covidestim_correlations ) +
   theme_c() +
-  labs(x = "Covidestim Estimates\n(Standardized)",
-       y = "Wastewater Concentrations\n(Standardized)",
+  labs(x = "Covidestim Estimates\n(Standardized by County)",
+       y = "Wastewater Concentrations\n(Standardized by County)",
        title = "Correlations Between Wastewater Concentrations\nand Covidestim Estimates")
 
 
@@ -466,7 +466,7 @@ w_data%>%
                         name = "Probabilistic Bias Intervals") +
       theme_bw() +
      theme_c() +
-      labs(y = "Value (Standardized)",
+      labs(y = "Value (Standardized by County)",
            title = "",
            x= "") +
       scale_x_date(date_labels = "%b %Y") +
@@ -550,8 +550,8 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Mean Wastewater Concentration\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
 
 
@@ -572,8 +572,8 @@ plt_wastewater_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Mean Wastewater Concentration\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County by County)",
+       y = "Mean Wastewater Concentration\n(Standardized by County by County)",
        title = "")
 
   
@@ -615,8 +615,8 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Covidestim Estimates\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County by County)",
+       y = "Covidestim Estimates\n(Standardized by County by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
 
 
@@ -636,8 +636,8 @@ plt_covidestim_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Covidestim Estimates\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County by County)",
+       y = "Covidestim Estimates\n(Standardized by County by County)",
        title = "")
 
 
@@ -699,8 +699,8 @@ w_data %>%
                                       round(Correlation,3))), 
                 data= covidestim_correlations ) +
   theme_c() +
-  labs(x = "Covidestim Estimates\n(Standardized)",
-       y = "Wastewater Concentrations\n(Standardized)",
+  labs(x = "Covidestim Estimates\n(Standardized by County by County)",
+       y = "Wastewater Concentrations\n(Standardized by County by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
 
 
@@ -785,7 +785,7 @@ w_data%>%
                         name = "Probabilistic Bias Intervals") +
       theme_bw() +
      theme_c() +
-      labs(y = "Value (Standardized)",
+      labs(y = "Value (Standardized by County by County)",
            title = "",
            x= "") +
       scale_x_date(date_labels = "%b %Y") +
@@ -844,8 +844,8 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Mean Wastewater Concentration\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
 
 
@@ -867,8 +867,8 @@ plt_wastewater_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Mean Wastewater Concentration\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "")
 
 
@@ -910,8 +910,8 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Covidestim Estimates\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Covidestim Estimates\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
 
 
@@ -931,8 +931,8 @@ plt_covidestim_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized)",
-       y = "Covidestim Estimates\n(Standardized)",
+  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+       y = "Covidestim Estimates\n(Standardized by County)",
        title = "")
 ```
 
@@ -970,8 +970,8 @@ w_data %>%
                                       round(Correlation,3))), 
                 data= covidestim_correlations ) +
   theme_c() +
-  labs(x = "Covidestim Estimates\n(Standardized)",
-       y = "Wastewater Concentrations\n(Standardized)",
+  labs(x = "Covidestim Estimates\n(Standardized by County)",
+       y = "Wastewater Concentrations\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
 
 
@@ -993,3 +993,135 @@ pb_correlations <- w_data %>%
 ```
 
 
+# Concordance with Covidestim
+
+
+```{r}
+
+
+
+ma_concordance <- wjoined %>%
+  filter(biweek >=6) %>%
+  # covidestim does not report estimates for Nantucket 
+  filter(!grepl("Nantucket", name )) %>%
+  select(-date) %>%
+  distinct() %>%
+  select(exp_cases_lb, exp_cases_ub, name, biweek, vlabel, infections) %>%
+  mutate(in_interval = case_when(
+    exp_cases_lb <= infections & infections <= exp_cases_ub ~ "In Interval",
+    exp_cases_lb  > infections  ~ "Below Interval",
+    exp_cases_ub < infections ~ "Above Interval"
+  ) ) %>%
+  group_by(in_interval, name, vlabel) %>%
+  summarize(n_per_county=n()) %>%
+  group_by(vlabel, in_interval) %>%
+  summarize(n_per_version = sum(n_per_county)) %>%
+  group_by(vlabel) %>%
+  mutate(total = sum(n_per_version)) %>%
+  ungroup() %>%
+  mutate(prop=n_per_version/total)
+
+```
+
+
+## Concordance by County
+
+```{r}
+
+ma_concordance_by_county %>%
+  filter(vlabel=="$P(S_1|untested)$ Centered at Emp. Value")
+
+##############################################
+# stacked bar chart of concordance by county
+##############################################
+ma_concordance_by_county %>%
+  filter(vlabel=="$P(S_1|untested)$ Centered at Emp. Value") %>%
+  group_by(county_name) %>%
+  mutate(m = prop[which(in_interval=="In Interval")]) %>%
+  ungroup() %>%
+  mutate(in_interval = factor(in_interval, levels = c("Above Interval",
+                            "In Interval", "Below Interval"))) %>%
+  ggplot(aes(x= fct_reorder(county_name,m), 
+             fill = (in_interval), y =prop)) + 
+  geom_bar(stat="identity",position="stack") +
+  theme_c() +
+  coord_flip()+
+  scale_fill_manual(values=c("In Interval" = "#79D2AF",
+                             "Above Interval" = "#D2AF79",
+                      "Below Interval"="#7997D2")) +
+  labs(x="", 
+       y= "Proportion",
+       fill = "Covidestim Median:",
+       title = "Massachusetts: Proportion Where Covidestim Median\nWas Within, Above, or Below the Median",
+       subtitle = TeX("For Implementation with $P(S_1|untested)$ Centered at Survey Value")) +
+  theme_c() +
+  theme(legend.position="right",
+          legend.title = element_text(face="bold", size = 15),
+          legend.text= element_text( size = 15),
+          legend.spacing.y = unit(3, 'pt'),
+          axis.text.y = element_text(size = 17, hjust=1))
+  
+
+
+```
+
+## Concordance by Version
+
+
+```{r}
+
+in_interval <- ma_concordance %>%
+  filter(in_interval == "In Interval") %>%
+  mutate(n_interval = n_per_version) %>%
+  select(vlabel, n_interval)
+
+labels <- ma_concordance %>%
+  filter(in_interval=="In Interval") %>%
+  arrange((prop)) %>%
+  pull(vlabel) %>%
+  unique() %>%
+  as.character()
+
+
+#########################################################
+# CONCORDANCE BY VERSION 
+#########################################################
+ma_concordance %>%
+  left_join(in_interval) %>%
+  mutate(in_interval=factor(in_interval, 
+                            levels=c("Above Interval",
+                                      "In Interval",
+                                     "Below Interval"))) %>%
+  ggplot(aes(y =fct_reorder(vlabel,n_interval),
+             x = prop, 
+             fill=in_interval)) +
+  #facet_wrap(~fct_reorder((vlabel),m), ncol=1) +
+  geom_bar(stat="identity",position="stack", color="darkgray", linewidth=.2) +
+#  viridis::scale_fill_viridis(option="mako", begin=.2, discrete=TRUE) +
+  theme_c(legend.position="right",
+          legend.title = element_text(face="bold", size = 15),
+          legend.text= element_text( size = 15),
+          legend.spacing.y = unit(3, 'pt'),
+          axis.text.y = element_text(size = 17, hjust=1)) +
+  theme(
+          plot.subtitle = element_text(size=18, face='italic', 
+                                       margin=margin(4,0,4,0))) +
+  scale_y_discrete(labels=unname(TeX(labels))) +
+  labs(y ="",
+       x="Proportion",
+       fill = "Covidestim Median:",
+       title = "Where Covidestim Medians Fall\nRelative to Probabilistic Bias Intervals",
+       subtitle = "By Version, in Massachusetts") +
+  scale_fill_manual(values=c("Below Interval"="#7997D2",
+                             "In Interval" = "#79D2AF",
+                             "Above Interval" = "#D2AF79"),
+                     breaks = c("Below Interval",
+                               "In Interval",
+                               "Above Interval")) +
+  guides(fill=guide_legend(byrow=TRUE)) +
+  scale_x_continuous(n.breaks = 7,
+                     expand=c(0,0),
+                     limits=c(-.05,1))
+
+
+```
