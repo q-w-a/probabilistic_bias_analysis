@@ -420,3 +420,72 @@ get_v6_county_corrected <- function(county_testing, params) {
 }
 
 
+#----------------- Version 7 ------------------------
+#---------- Version 1 -------------
+get_county_v7 <- function(data, testing = FALSE) {
+  
+  params <-  list(
+    alpha_mean = .95,
+    alpha_sd = 0.08,
+    alpha_bounds = NA,
+    # alpha_bounds = c(.8,1),
+    beta_mean = .216,
+    beta_sd =.09,
+    beta_bounds = NA,
+    #  beta_bounds = c(0.002, 0.4),
+    s_untested_mean = .016,
+    s_untested_sd = .0225,
+    #  s_untested_bounds = c(0.0018, Inf),
+    s_untested_bounds = NA,
+    p_s0_pos_mean = .4,
+    p_s0_pos_sd = .1225,
+    p_s0_pos_bounds = NA,
+    #  p_s0_pos_bounds = c(.25, .7),
+    pre_nsamp = 1e6,
+    post_nsamp = 1e5)
+  
+  
+  county_testing <- data
+  
+  county_testing <- county_testing %>%
+    select(-date) %>% 
+    distinct()
+  
+  
+  # only use a few rows if testing
+  county_testing <- if(testing) county_testing %>% 
+    filter(biweek >=6) %>% slice_sample(n=5) else county_testing
+  
+  melded <- do.call(get_melded, params)
+  
+  corrected <- pmap_df(county_testing, 
+                       function(posrate,
+                                population,
+                                total, 
+                                positive,
+                                biweek,
+                                fips,
+                                ...) {
+                         process_priors_per_county(
+                           priors = melded$post_melding,
+                           county_df = tibble(posrate, 
+                                              population,
+                                              total, 
+                                              positive,
+                                              biweek,
+                                              fips),
+                           nsamp = params$post_nsamp) %>%
+                           generate_corrected_sample(., num_reps = 1e3) %>%
+                           summarize_corrected_sample() })
+  
+  
+  corrected <- corrected %>%
+    mutate(version="v7")
+  
+  return(corrected)
+  
+  
+}
+
+
+

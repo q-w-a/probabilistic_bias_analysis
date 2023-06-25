@@ -129,6 +129,13 @@ list(
       vary = "s_untested_and_beta"
     )
   ),
+  # version 7
+  tar_target(
+    name = state_v7,
+    command = get_v7_state(
+      data = tests_biweekly_state
+    )
+  ),
   
   
   #---------------- county-level analysis -------------------
@@ -194,6 +201,14 @@ list(
       ctis=ctis_smoothed,
       spline=TRUE,
       vary = "s_untested_and_beta"
+    )
+  ),
+  
+  # version 7
+  tar_target(
+    name = ma_v7,
+    command = get_county_v7(
+      data = ma_biweekly_county
     )
   ),
   
