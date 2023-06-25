@@ -96,6 +96,10 @@ county <- tar_read(ma_v1,
    bind_rows(
     tar_read(ma_v6,
              store =targets_dir)
+   )%>%
+   bind_rows(
+    tar_read(ma_v7,
+             store =targets_dir)
    )
 
 waste <- tar_read(waste, store =targets_dir)
@@ -129,22 +133,24 @@ counties_with_waste <- wjoined %>%
 
 
 versions <- tibble(
-  version = c("v1", "v2", "v3", "v4", "v5", "v6"),
+  version = c("v1", "v2", "v3", "v4", "v5", "v6", "v7"),
   vlabel = factor(
-    c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+    c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
     "$\\beta$ Centered at Emp. Value",
     "$P(S_1|untested)$ Centered at Emp. Value",
     "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
         "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
+        "$\\,$CTIS Priors that Do Not Vary by Date$\\,$"
     ),
     levels = c(
-        "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+        "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
         "$\\beta$ Centered at Emp. Value",
          "$P(S_1|untested)$ Centered at Emp. Value",
         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
         "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
+        "$\\,$CTIS Priors that Do Not Vary by Date$\\,$"
        
     ) )
 )
@@ -241,7 +247,9 @@ w_data %>%
        y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
 
+```
 
+```{r}
 plt_wastewater_pb <- w_data %>%
   group_by(version) %>%
   ggplot(aes(x=exp_cases_median_std, y = mean_conc_std)) +
@@ -281,7 +289,7 @@ covidestim_correlations <- w_data %>%
   # missing values are handled by casewise deletion
   summarize(Correlation = cor(exp_cases_median_std,infections_std,
                               use = "complete.obs")) %>%
-  mutate(x=2.5,
+  mutate(x=2.8,
          y=.1)
 
 
@@ -350,8 +358,8 @@ cor_waste <- correlations %>%
 cor_waste %>%
   left_join(cor_covid) %>%
   mutate(vlabel = gsub(
-    "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
-    "Priors Do Not Vary by County and Date",
+    "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
+    "Priors Do Not Vary by State and Date",
     vlabel, fixed=TRUE),vlabel=gsub(" at","\nat", vlabel)) %>%
   arrange(desc( `Correlation with Wastewater Concentrations`)) %>%
   rename(Implementation = vlabel) %>%
@@ -1102,7 +1110,7 @@ ma_concordance_by_county %>%
 ## Concordance by Version
 
 
-```{r, fig.width=15}
+```{r, fig.width=13}
 
 # 
 in_interval <- ma_concordance %>%
@@ -1132,21 +1140,19 @@ ma_concordance %>%
              fill=in_interval)) +
   #facet_wrap(~fct_reorder((vlabel),m), ncol=1) +
   geom_bar(stat="identity",position="stack", color="darkgray", linewidth=.2) +
-#  viridis::scale_fill_viridis(option="mako", begin=.2, discrete=TRUE) +
-  theme_c(legend.position="right",
+   theme_c(axis.text.y = element_text(size = 14, hjust=1),
+          axis.title.x = element_text(size=14),
+          axis.text.x=element_text(size=10),
+          legend.position="right",
           legend.title = element_text(face="bold", size = 15),
           legend.text= element_text( size = 15),
-          legend.spacing.y = unit(3, 'pt'),
-          axis.text.y = element_text(size = 17, hjust=1)) +
-  theme(
-          plot.subtitle = element_text(size=18, face='italic', 
-                                       margin=margin(4,0,4,0))) +
+          legend.spacing.y = unit(3, 'pt')) +
   scale_y_discrete(labels=unname(TeX(labels))) +
   labs(y ="",
-       x="Proportion",
+       x="Proportion Containing the Covidestim Median",
        fill = "Covidestim Median:",
        title = "Where Covidestim Medians Fall\nRelative to Probabilistic Bias Intervals",
-       subtitle = "By Version, in Massachusetts") +
+       subtitle = "By Implementation, in Massachusetts") +
   scale_fill_manual(values=c("Below Interval"="#7997D2",
                              "In Interval" = "#79D2AF",
                              "Above Interval" = "#D2AF79"),
@@ -1158,6 +1164,9 @@ ma_concordance %>%
                      expand=c(0,0),
                      limits=c(-.05,1))
 
+```
+
+```{r, fig.width=12.3}
 
 ma_concordance %>%
   group_by(vlabel) %>%
@@ -1172,12 +1181,23 @@ ma_concordance %>%
                    labels=function(x)TeX(x)) +
   scale_x_continuous(expand=c(0,0), 
                      limits=c(0,.9), n.breaks=7)  +
-  theme_c() +
+  theme_c(axis.text.y = element_text(size = 13, hjust=1),
+          axis.title.x = element_text(size=14),
+          axis.text.x=element_text(size=10)) +
   labs(y="",
        x="Proportion Containing the Covidestim Median",
-       title="Proportion Containing the Covidestim Median\nBy Implementation")
+       title="Proportion Containing the Covidestim Median",
+       subtitle = "By Implementation")
 
  
 
 
 ```
+
+# Summary of Comparison Between Implementations 
+
+Although the spline-smoothing improved the correlations, it did not improve the proportion containing the Covidestim median. 
+
+The implementation centering $\Pr(S_1|\text{untested})$ at the survey value along with the implementation that does not vary the priors by state or date are the most correlated with Covidestim estimates, wastewater concentrations, and  have the highest proportion of county-biweeks containing the Covidestim median.
+
+

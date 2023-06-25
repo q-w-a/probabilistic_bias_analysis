@@ -391,6 +391,7 @@ ctis %>%
 ```
 
 ```{r,include=FALSE}
+
 ctis %>%
   ggplot(aes(x = beta, fill=state)) +
   geom_density() +
@@ -402,4 +403,22 @@ ctis %>%
 
 ```
 
+
+```{r}
+
+ctis %>%
+  group_by(state) %>%
+  summarize(mean=mean(beta,na.rm=TRUE)) %>%
+  pull(mean) %>%
+  mean()
+
+
+
+ctis %>%
+  group_by(state) %>%
+  summarize(mean=mean(smoothed_wcli,na.rm=TRUE)) %>%
+  pull(mean) %>%
+  mean()
+  
+```
 

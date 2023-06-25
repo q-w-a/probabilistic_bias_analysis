@@ -523,8 +523,6 @@ get_v6_corrected <- function(state_testing, params) {
 
 #---------------- Version 7 --------------
 
-
-#---------- Version 1 -------------
 get_v7_state <- function(data, testing = FALSE) {
   
   params <-  list(
@@ -587,3 +585,5 @@ get_v7_state <- function(data, testing = FALSE) {
   return(corrected)
   
 }
+
+
