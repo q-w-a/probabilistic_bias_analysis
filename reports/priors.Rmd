@@ -342,15 +342,55 @@ ggsave(here("figures/emp-estimate-beta-dist-by-state.pdf"))
  
 ```
 
+
+```{r, fig.height=7}
+
+
+ctis %>%
+  group_by(state) %>%
+  summarize(median = median(beta, na.rm=TRUE),
+            mean = mean(beta, na.rm=TRUE),
+            q1 = quantile(beta, .025,  na.rm=TRUE),
+            q2 = quantile(beta, .975,  na.rm=TRUE)) %>%
+  ggplot(aes(y=fct_reorder(state, mean, .desc=TRUE))) +
+  ggridges::geom_density_ridges(
+    aes(x=beta,
+        y=fct_reorder(state, beta, .fun =mean)),
+    data=ctis,
+    fill="#596281",
+    quantile_lines=TRUE,
+    quantiles = c(.025,.975),
+    quantile_fun=function(beta,...) c(
+                                    #  quantile(beta,.025, na.rm=TRUE),
+                                      mean(beta,na.rm=TRUE)
+                                    #  quantile(beta,.975, na.rm=TRUE)
+                                      )) +
+  # geom_errorbar(aes( xmin=q1,xmax=q2),width=.2) +
+  scale_x_continuous(n.breaks=10, limits=c(0,1)) +
+  labs(x= TeX("Empirical Estimates of $\\beta$"),
+       y="State",
+       title = TeX("Empirical Estimates of $\\beta$ from the COVID-19 Trends and Impact Survey"),
+       subtitle = "Density Estimate of Distribution and Mean by State" ) +
+  theme_c(axis.title=element_text(size=12),
+          axis.text.x=element_text(size=11)) 
+
+
+```
+
+
+
 ```{r}
 
 
 ctis %>%
   ggplot(aes(x = beta, fill=state)) +
-  geom_density() +
+  geom_density(alpha=.6) +
   scale_fill_viridis(option="mako", discrete=TRUE) +
   theme_c()
 
+```
+
+```{r,include=FALSE}
 ctis %>%
   ggplot(aes(x = beta, fill=state)) +
   geom_density() +
