@@ -24,7 +24,8 @@ library(targets)
 library(here)
 library(latex2exp)
 library(kableExtra)
-
+library(scales)
+library(cowplot)
 ```
 
 
@@ -102,9 +103,16 @@ county <- tar_read(ma_v1,
              store =targets_dir)
    )
 
+
 waste <- tar_read(waste, store =targets_dir)
+county_names <- read_tsv(here("data/demographic/county_fips.tsv")) %>%
+  rename_with(.cols = everything(), .fn =tolower) %>%
+  bind_rows()
+
 covidestim <- tar_read(covidestim_biweekly_county,
-                        store =targets_dir)
+                        store =targets_dir) %>%
+  select(-c(date)) %>% 
+  distinct()
 
 dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
 
@@ -118,6 +126,7 @@ wjoined <- county %>%
   mutate(fips = ifelse(grepl("25019", fips), "25019", fips)) %>%
   inner_join(waste) %>%
   left_join(covidestim, relationship = "many-to-many") %>%
+  left_join(dates,  relationship = "many-to-many") %>%
   group_by(biweek) %>%
   mutate(mindate = min(date),
          maxdate = max(date)) %>%
@@ -432,18 +441,111 @@ names(pal) <- c(#"$observed$",
                )
 
 
+
+w_data <- w_data %>%
+  group_by(name) %>%
+  mutate(adjust = 1/(max(mean_conc))*(exp_cases_median[which.max(mean_conc)])) %>%
+  ungroup()
+
 waste_df <- w_data %>%
-  select(biweek, mean_conc_std, name) %>%
+  select(biweek, mean_conc, name, adjust, fips) %>%
   distinct() %>%
   left_join(dates,relationship = "many-to-many" ) %>%
   group_by(name, biweek) %>%
   # center date within 2-week interval
   summarize(date = min(date) + days(7),
-            mean_conc_std=unique(mean_conc_std)) %>%
+            mean_conc =unique(mean_conc),
+            adjust=unique(adjust),
+            fips = unique(fips)) %>%
   mutate(name = gsub("County, MA", "", name))
 
 
-w_data%>%
+pltlist <- w_data %>%
+  mutate(name = gsub("County, MA", "", name)) %>%
+  left_join(dates,relationship = "many-to-many" ) %>%
+  # filter(version %in% c("v1","v3")) %>%
+  filter(version=="v1") %>%
+  filter(biweek>=6) %>%
+  group_by(biweek) %>%
+  mutate(mindate = min(date),
+         maxdate=max(date)) %>%
+  ungroup() %>% 
+  group_by(name) %>%
+  group_split() %>%
+  map(~ { 
+    
+    county_fips <- .x$fips %>% unique()
+    adj <- .x$adjust %>% unique()
+    
+    .x %>% 
+ #   filter(fips == county_fips  & date >= begin_date & date <= end_date) %>%
+    ggplot() +
+      geom_ribbon(aes(x = date, 
+                 ymin = exp_cases_lb,
+                 ymax = exp_cases_ub,
+                 fill = vlabel),
+                 alpha = .5) +
+      geom_line(data = waste_df[which(waste_df$fips == county_fips),],
+                aes(x = date, y =mean_conc*adj, 
+                    color = 'Wastewater Effective Concentrations'),
+               # color = "#DB4048",
+                size = 1.1) +
+      geom_linerange(aes(xmin = mindate, 
+                         xmax = maxdate, 
+                         y = infections,
+                         color = 'Covidestim Infection Estimates')) + 
+      geom_point(data =  waste_df[which(waste_df$fips == county_fips),],
+                aes(x = date, y =mean_conc*adj ),
+                color = "#DB4048",
+                alpha = .5,
+                size = 1.2) +
+      scale_y_continuous(sec.axis=sec_axis(~.x/adj,
+                                           name = 'Mean Wastewater Effective Concentration',
+                                           labels=comma),
+                         labels=comma
+                    ) +
+      # facet_grid(name~vlabel, 
+      #            labeller=labeller(vlabel =as_labeller(
+      #              TeX, default=label_parsed))) +
+      facet_wrap(~name, ncol=3) + 
+      scale_fill_manual(values = pal, labels = c('','','',''), 
+                        name = "Probabilistic Bias Intervals") +
+     theme_c(legend.position="none") +
+      labs(y = "Value (Standardized by County)",
+           title = "",
+           x= "") +
+      scale_x_date(date_labels = "%b %Y") +
+    scale_color_manual(
+      name = '', 
+      values = c(
+        'Covidestim Infection Estimates' = 'darkblue',
+        'Wastewater Effective Concentrations' = '#DB4048')) +
+    guides(color = guide_legend(override.aes = list(size = 12,
+                                                    linewidth=3)),
+           fill = guide_legend(override.aes =list(size = 6))) 
+    })
+
+legend <- cowplot::get_legend(
+  pltlist[[1]] + theme(legend.position="top")
+)
+
+grid <- cowplot::plot_grid(plotlist=pltlist, ncol =3)
+
+cowplot::plot_grid(legend, grid, nrow=2, rel_heights=c(.05,.95))
+
+```
+
+```{r, eval=FALSE,include=FALSE}
+
+
+
+ w_data_std <- w_data %>%
+  group_by(name, version) %>%
+  mutate(exp_cases_lb = exp_cases_lb /max(exp_cases_median),
+         exp_cases_ub = exp_cases_ub /max(exp_cases_median),
+         exp_cases_median = exp_cases_median / max(exp_cases_median),
+         mean_conc=mean_conc/max(mean_conc),
+         infections=infections/max(infections)) %>%
   mutate(name = gsub("County, MA", "", name)) %>%
   left_join(dates,relationship = "many-to-many" ) %>%
   filter(version %in% c("v1","v3")) %>%
@@ -451,28 +553,45 @@ w_data%>%
   group_by(biweek) %>%
   mutate(mindate = min(date),
          maxdate=max(date)) %>%
-  ungroup() %>% 
+  ungroup()
+
+
+
+waste_df <- w_data_std %>%
+  select(biweek, mean_conc, name, fips) %>%
+  distinct() %>%
+  left_join(dates,relationship = "many-to-many" ) %>%
+  group_by(name, biweek) %>%
+  # center date within 2-week interval
+  summarize(date = min(date) + days(7),
+            mean_conc =unique(mean_conc),
+            fips = unique(fips)) %>%
+  mutate(name = gsub("County, MA", "", name))
+
+
+w_data_std %>% 
  #   filter(fips == county_fips  & date >= begin_date & date <= end_date) %>%
     ggplot() +
       geom_ribbon(aes(x = date, 
-                 ymin = exp_cases_lb_std,
-                 ymax = exp_cases_ub_std,
+                 ymin = exp_cases_lb,
+                 ymax = exp_cases_ub,
                  fill = vlabel),
                  alpha = .5) +
       geom_line(data = waste_df,
-                aes(x = date, y =mean_conc_std, 
+                aes(x = date, y =mean_conc, 
                     color = 'Wastewater Effective Concentrations'),
                # color = "#DB4048",
                 size = 1.1) +
       geom_linerange(aes(xmin = mindate, 
                          xmax = maxdate, 
-                         y = infections_std,
+                         y = infections,
                          color = 'Covidestim Infection Estimates')) + 
-      geom_point(data = waste_df,
-                aes(x = date, y =mean_conc_std ),
+      geom_point(data =  waste_df,
+                aes(x = date, y =mean_conc),
                 color = "#DB4048",
                 alpha = .5,
                 size = 1.2) +
+   #   scale_y_continuous(sec.axis=sec_axis(~.x/adj)) +
       facet_grid(name~vlabel, 
                  labeller=labeller(vlabel =as_labeller(
                    TeX, default=label_parsed))) +
@@ -491,20 +610,9 @@ w_data%>%
         'Wastewater Effective Concentrations' = '#DB4048')) +
     guides(color = guide_legend(override.aes = list(size = 12,
                                                     linewidth=3)),
-           fill = guide_legend(override.aes =list(size = 6)))
-
-
-
+           fill = guide_legend(override.aes =list(size = 6))) 
+  
 ```
-
-
-
-
-
-
-
-
-
 
 
 ## Normalization Strategy 2: By Values at Biweek Where Wastewater Concentration is Maximized
@@ -1007,6 +1115,297 @@ pb_correlations <- w_data %>%
 ```
 
 
+
+# Simulation Intervals Over Time
+
+
+```{r, fig.width=11, fig.height=8}
+
+
+county_dat <- county %>%
+  # set Nantucket, Duke fips to Nantucket since we have wastewater data
+  # for Nantucket
+  left_join(dates,  relationship = "many-to-many") %>%
+  group_by(biweek) %>%
+  mutate(mindate = min(date),
+         maxdate = max(date)) %>%
+  ungroup() %>%
+  left_join(county_names, by=c('fips'='fips')) %>%
+  mutate(name = ifelse(fips =="25007,25019", "Nantucket and Dukes", name))
+
+
+
+county_dat %>%
+  filter(version=="v1")  %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub),
+             alpha = .5,
+             show.legend=FALSE,
+             fill="#596281") +
+   geom_linerange(aes(xmin = mindate,
+                      xmax=maxdate,
+                      y = positive,
+                      color = 'obs'),
+                  size=.5) +
+  facet_wrap(~name, scales="free_y", ncol=3) +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          ) +
+  scale_fill_manual(values = pal)  +
+  labs(x="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "Counties in Massachusetts") +
+  scale_color_manual(values = c('obs' = 'red'), labels = 'Positive Tests',
+                     name = '') +
+  guides(color = guide_legend(override.aes = list(linewidth =2)))
+
+
+
+```
+
+## Ratio of Estimated Infections to Observed
+
+```{r, fig.width=12, fig.height=9}
+
+
+county_dat %>%
+  filter(version=="v1")  %>%
+  #filter(grepl("Nan",name)) %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb/positive,
+             ymax = exp_cases_ub/positive),
+             alpha = .5,
+             show.legend=FALSE,
+             fill="#596281") +
+   # geom_linerange(aes(xmin = mindate,
+   #                    xmax=maxdate,
+   #                    y = positive,
+   #                    color = 'obs')) +
+  facet_wrap(~name,ncol=3) +
+ # facet_grid(name~vlabel, 
+ #                 labeller=labeller(vlabel =as_labeller(
+ #                   TeX, default=label_parsed))) +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top") +
+  scale_fill_manual(values = pal)  +
+  labs(x="",
+       y = "Estimated Infections",
+       title = "Ratio of Estimated to Observed Over Time",
+       subtitle = "Counties in Massachusetts") +
+  scale_color_manual(values = c('obs' = 'red'), labels = 'Positive Tests',
+                     name = '') +
+  guides(color = guide_legend(override.aes = list(linewidth =2)))
+
+
+
+```
+
+
+# Trends in Total Tests and Positive Tests
+
+Informs our understanding of the trends in the ratio of estimated to observed infections.
+
+
+## Positive Tests and Test Positivity
+
+
+```{r, fig.height=12, fig.width=12}
+
+############################################
+# POSITIVE TESTS AND TEST POSITIVITY
+############################################
+pltlist <- county_dat %>%filter(version=="v1") %>%
+    mutate(testpos = positive/total) %>%
+  group_by(across(-date)) %>%
+  summarize(date=min(date) + days(7)) %>%
+  group_by(fips) %>%
+  mutate(adj = (1/max(testpos)) * max(positive)) %>%
+  group_split() %>%
+  map(~ {
+    adj <-unique(.x$adj)
+    .x %>%
+      ggplot(aes(x=date))+
+    geom_line(aes(y=positive, color = 'Positive Tests')) +
+      geom_point(aes(y=positive, color = 'Positive Tests'),
+              alpha=.5,
+              size=.8) +
+    geom_line(aes(y=testpos*adj, color='Test Positivity'),
+              linetype=2) +
+      geom_point(aes(y=testpos*adj, color='Test Positivity'),
+              alpha=.5,
+              size=.8) +
+    #scale_linetype_discrete(breaks = c(1,1,2)) +
+    scale_color_manual(values=c(
+                                "Positive Tests"= "#279143",
+                                "Test Positivity"= '#E38E4F')) +
+    guides(color = guide_legend(override.aes = list(linetype = c(1,2),
+                                                    linewidth=c(2,2)))) +
+    theme_c() +
+    theme(axis.title = element_text(size=10),
+          axis.text =element_text(size=9),
+          legend.position="none") +
+    scale_y_continuous(labels=comma, sec.axis = sec_axis(~./adj , name = 'Test Positivity')) +
+    labs(color ='',
+         y="Positive Tests",
+         x= "Date") +
+      facet_wrap(~name)
+        
+  })
+
+legend <- get_legend(
+  pltlist[[1]] +
+    theme(legend.position = "top",
+          legend.text=element_text(size=16))
+)
+
+
+title_gg <- ggplot() + 
+  labs(title = "Comparing Trends in Positive Tests and Test Positivity") + 
+  theme(plot.title=element_text(face="bold",
+                                hjust = .5, 
+                                size = 18,
+                                margin =margin(5,0,2,0)))
+
+
+plt <- cowplot::plot_grid(plotlist=pltlist, ncol=3) 
+
+plot_grid(title_gg, legend, plt, rel_heights=c(.03, .03,.94), ncol=1)
+
+```
+
+
+## Total Tests and Positive Tests
+
+
+
+```{r, fig.height=12, fig.width=12}
+
+#####################################
+# TOTAL TESTS AND POSITIVE TESTS
+#####################################
+pltlist <- county_dat %>%filter(version=="v1") %>%
+    mutate(testpos = positive/total) %>%
+  group_by(across(-date)) %>%
+  summarize(date=min(date) + days(7)) %>%
+  group_by(fips) %>%
+  mutate(adj = (1/max(total)) * max(positive)) %>%
+  group_split() %>%
+  map(~ {
+    adj <-unique(.x$adj)
+    .x %>%
+      ggplot(aes(x=date))+
+    geom_line(aes(y=positive, color = 'Positive Tests')) +
+      geom_point(aes(y=positive, color = 'Positive Tests'),
+              alpha=.5,
+              size=.8) +
+    geom_line(aes(y=total*adj, color='Total Tests'),
+              linetype=2) +
+      geom_point(aes(y=total*adj, color='Total Tests'),
+              alpha=.5,
+              size=.8) +
+    #scale_linetype_discrete(breaks = c(1,1,2)) +
+    scale_color_manual(values=c(
+                                "Positive Tests"= "#279143",
+                                "Total Tests"= '#E38E4F')) +
+    guides(color = guide_legend(override.aes = list(linetype = c(1,2)))) +
+    theme_c() +
+    theme(axis.title = element_text(size=11),
+          axis.text =element_text(size=8),
+          legend.position="none") +
+    scale_y_continuous(labels=label_scientific(), 
+                       n.breaks=4,
+                       sec.axis = sec_axis(~./adj ,
+                                           name = 'Total Tests',
+                                           labels=label_scientific())) +
+    labs(color ='',
+         y="Positive Tests",
+         x= "Date") +
+      facet_wrap(~name)
+})
+
+legend <- cowplot::get_legend(
+  pltlist[[1]] +
+  theme(legend.position="top") +
+    guides(color = guide_legend(keywidth=2,
+                                override.aes = list(linewidth=c(2,2),
+                                                    linetype =c(1,2))))
+)
+
+title_gg <- ggplot() + 
+  labs(title = "Comparing Trends in Total Tests and Positive Tests") + 
+  theme(plot.title=element_text(face="bold",
+                                hjust = .5, 
+                                size = 18,
+                                margin =margin(5,0,2,0)))
+
+plt <- cowplot::plot_grid(plotlist=pltlist, ncol=3)
+
+cowplot::plot_grid(title_gg, legend, plt, rel_heights =c(.03, .03,.94),ncol=1) 
+
+```
+
+## Percent Change in Total Tests and Positive Tests
+
+```{r, fig.height=10, fig.width=12}
+
+###################################################
+# PERCENT CHANGE: TOTAL TESTS AND POSITIVE TESTS
+###################################################
+
+county_dat %>%
+  filter(version=="v1") %>%
+  filter(!grepl("Nantucket",name)) %>%
+    mutate(testpos = positive/total) %>%
+  group_by(across(-date)) %>%
+  summarize(date=min(date) + days(7)) %>%
+  group_by(fips) %>%
+  arrange(biweek) %>%
+  mutate(pct_change_positive = (positive - lag(positive, 1))/lag(positive, 1),
+         pct_change_total = (total - lag(total, 1))/lag(total, 1)) %>%
+
+   ggplot(aes(x=date))+
+    geom_line(aes(y=pct_change_positive, color = 'Positive Tests')) +
+      geom_point(aes(y=pct_change_positive, color = 'Positive Tests'),
+              alpha=.5,
+              size=.8) +
+    geom_line(aes(y=pct_change_total, color='Total Tests'),
+              linetype=2) +
+      geom_point(aes(y=pct_change_total, color='Total Tests'),
+              alpha=.5,
+              size=.8) +
+    #scale_linetype_discrete(breaks = c(1,1,2)) +
+    scale_color_manual(values=c(
+                                "Positive Tests"= "#279143",
+                                "Total Tests"= '#E38E4F')) +
+    guides(color = guide_legend(override.aes = list(linetype = c(1,2)))) +
+    theme_c() +
+    theme(axis.title = element_text(size=15),
+          axis.text.x=element_text(size=9),
+          legend.position="top") +
+   # scale_y_continuous(labels=comma, sec.axis = sec_axis(~./adj , name = 'Test Positivity')) +
+    labs(color ='',
+         y="Percent Change",
+         x= "Date",
+         title = "Percent Change in Positive Tests and Total Tests") +
+      facet_wrap(~name, ncol=3, scales="free_x") +
+  scale_y_continuous(limits = c(-1,5.5),
+                     labels=percent) +
+  scale_x_date(date_breaks="3 months", date_labels="%b %Y")
+
+
+```
+
+
 # Concordance with Covidestim
 
 
@@ -1196,7 +1595,7 @@ ma_concordance %>%
 
 # Summary of Comparison Between Implementations 
 
-Although the spline-smoothing improved the correlations, it did not improve the proportion containing the Covidestim median. 
+Although the spline-smoothing improved the correlations with wastewater concentrations and the correlations with Covidestim estimates, it did not improve the proportion containing the Covidestim median. 
 
 The implementation centering $\Pr(S_1|\text{untested})$ at the survey value along with the implementation that does not vary the priors by state or date are the most correlated with Covidestim estimates, wastewater concentrations, and  have the highest proportion of county-biweeks containing the Covidestim median.
 
