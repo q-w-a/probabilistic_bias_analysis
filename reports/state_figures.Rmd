@@ -26,34 +26,36 @@ library(latex2exp)
 
 ```
 
-```{r load-data}
+```{r load-data, fig.width=10}
 
 
 # clear labels for versions
 versions <- tibble(
-  version = c("v1", "v2", "v3", "v4", "v5", "v6"),
+  version = c("v1", "v2", "v3", "v4", "v5", "v6", "v7"),
   vlabel = factor(
-    c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+    c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
     "$\\beta$ Centered at Emp. Value",
     "$P(S_1|untested)$ Centered at Emp. Value",
     "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
         "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
+        "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ),
     levels = c(
-        "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+        "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
         "$\\beta$ Centered at Emp. Value",
          "$P(S_1|untested)$ Centered at Emp. Value",
         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
         "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)"
-       
+         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
+        "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ) )
 )
 
 
+
 # read state-level results
-targets_dir <- here("_targets_6_19")
+targets_dir <- here("_targets")
 
 state_res <- tar_read(state_v1, 
                    store =targets_dir) %>% 
@@ -69,16 +71,19 @@ state_res <- tar_read(state_v1,
    bind_rows(
     tar_read(state_v4, 
              store =targets_dir)
-   )
-  # )%>%
-  #  bind_rows(
-  #   tar_read(state_v5, 
-  #            store =targets_dir)
-  # )%>%
-  #  bind_rows(
-  #   tar_read(state_v6, 
-  #            store =targets_dir)
-  # )
+   )%>%
+   bind_rows(
+    tar_read(state_v5,
+             store =targets_dir)
+  )%>%
+   bind_rows(
+    tar_read(state_v6,
+             store =targets_dir)
+  ) %>%
+   bind_rows(
+    tar_read(state_v7,
+             store =targets_dir)
+  )
 
 covidestim <- tar_read(covidestim_biweekly_state,
                         store =targets_dir)
@@ -148,7 +153,7 @@ theme_c <- function(...){
 
 
 
-```{r,fig.width=11}
+```{r,fig.width=14}
 
 # corrected %>%
 #   mutate(in_interval = case_when(
@@ -209,21 +214,34 @@ by_version %>%
   labs(x="", 
        y= "Proportion",
        fill = "Covidestim Median:",
-       title = "Proportion Where Covidestim Median\nWas Within, Above, or Below the Median",
+       title = "Proportion of Simulation Intervals Where Covidestim Median\nWas Within, Above, or Below the Median",
        subtitle = "Including All States") +
   theme_c() +
-#  viridis::scale_fill_viridis(option="mako", begin=.2, discrete=TRUE) +
   theme_c(legend.position="right",
           legend.title = element_text(face="bold", size = 15),
           legend.text= element_text( size = 15),
           legend.spacing.y = unit(3, 'pt'),
           axis.text.y = element_text(size = 17, hjust=1)) +
-  theme(
+  theme(plot.title = element_text(size = 20),
           plot.subtitle = element_text(size=18, 
                                        face='italic', 
-                                       margin=margin(4,0,4,0))) +
+                                       margin=margin(4,0,4,0)),
+        axis.text.x=element_text(size=12),
+        axis.title = element_text(size=14)) +
   scale_x_discrete(labels = (TeX(labels)))
 
+
+
+```
+
+
+# Simulation Intervals
+
+```{r}
+
+
+subset <- state_res %>%
+  filter(vlabel ==  "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$")
 
 
 ```
