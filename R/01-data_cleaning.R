@@ -119,7 +119,7 @@ get_covidestim_state_biweekly <- function(end_date = "2022-02-25") {
   covidestim_biweekly <- covidestim %>%
     left_join(biweek_to_week) %>%
     group_by(biweek, state)  %>%
-    mutate(across(
+    summarize(across(
       contains("infections"), 
       sum)) %>%
     ungroup()
@@ -133,8 +133,7 @@ get_covidestim_state_biweekly <- function(end_date = "2022-02-25") {
   
   covidestim_biweekly <- covidestim_biweekly %>%
     rename(state_name = state) %>%
-    left_join(statecodes) %>%
-    select(-week)
+    left_join(statecodes) 
   
   return(covidestim_biweekly)
   
