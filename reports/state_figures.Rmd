@@ -22,7 +22,9 @@ knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
 library(tidyverse)
 library(targets)
 library(here)
+library(scales)
 library(latex2exp)
+library(cowplot)
 
 ```
 
@@ -55,11 +57,10 @@ versions <- tibble(
 
 
 # read state-level results
-targets_dir <- here("_targets")
+targets_dir <- here("_targets_6_26")
 
 state_res <- tar_read(state_v1, 
                    store =targets_dir) %>% 
-  mutate(version = "v1") %>%
   bind_rows(
     tar_read(state_v2,
              store =targets_dir)
@@ -98,10 +99,17 @@ state_res <- state_res %>%
   left_join(versions) %>%
   mutate(state=toupper(state)) %>%
   left_join(covidestim, relationship= "many-to-many") %>%
-  left_join(dates, relationship = "many-to-many") 
+  left_join(dates, relationship = "many-to-many")  %>%
+  rename(name=state_name) %>%
+  group_by(biweek) %>%
+  mutate(mindate=min(date),
+         maxdate=max(date)) %>%
+  ungroup()
 
 
 
+state_res <- state_res %>%
+  filter(version %in% c("v2", "v5", "v6", "v7")) 
 
 
 ```
@@ -235,7 +243,63 @@ by_version %>%
 ```
 
 
-# Simulation Intervals
+# Simulation Intervals Over Time
+
+```{r}
+
+all_versions <- state_res %>% 
+  group_by(state) %>%
+  summarize(state_n=n_distinct(version)) %>%
+  filter(state_n == max(state_n)) %>%
+  pull(state)
+```
+
+
+```{r, eval=FALSE}
+
+
+
+
+state_res %>%
+   filter(state %in% sample(unique(all_versions),5))  %>% 
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub),
+             alpha = .8,
+             show.legend=FALSE,
+             fill="#596281") +
+   geom_linerange(aes(xmin = mindate,
+                      xmax=maxdate,
+                      y = positive,
+                      color = 'obs'),
+                  size=.5) +
+  facet_grid(name~vlabel, 
+             labeller=labeller(vlabel =as_labeller(
+               TeX, default=label_parsed)),
+             scales="free_y") +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          ) +
+  scale_fill_manual(values = pal)  +
+  labs(x="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "By State") +
+  scale_color_manual(values = c('obs' = 'red'), labels = 'Positive Tests',
+                     name = '') +
+  guides(color = guide_legend(override.aes = list(linewidth =2)))
+
+
+
+
+```
+
+## Compare Versions
+
 
 ```{r}
 
@@ -243,17 +307,206 @@ by_version %>%
 subset <- state_res %>%
   filter(vlabel ==  "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$")
 
+pal <- c("#247C90", "red")
+
+names(pal) <- c(unique(subset$vlabel), "Covidestim")
+
+
+state_res %>%
+   filter(state %in% sample(unique(all_versions),5))  %>% 
+  filter(version %in% c("v2", "v5", "v6", "v7")) %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub,
+             fill=vlabel),
+             alpha = .8,
+             show.legend=FALSE #,
+           #  fill="#596281"
+             ) +
+   geom_linerange(aes(xmin = mindate,
+                      xmax=maxdate,
+                      y = positive,
+                      color = 'obs'),
+                  size=.5) +
+  facet_grid(name~vlabel, 
+             labeller=labeller(vlabel =as_labeller(
+               TeX, default=label_parsed)),
+             scales="free_y") +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          ) +
+  scale_fill_manual(values = pal)  +
+  labs(x="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "By State") +
+  scale_color_manual(values = c('obs' = 'red'), labels = 'Positive Tests',
+                     name = '') +
+  guides(color = guide_legend(override.aes = list(linewidth =2)))
+
+
+
+```
+
+## Compare States
+
+```{r, fig.height=11, fig.height=9}
+
+subset %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub,
+             fill = vlabel),
+             alpha = .8,
+             show.legend=FALSE) +
+  geom_ribbon(aes(x = date,
+                  fill = 'Covidestim',
+                  ymin = infections.lo,
+                  ymax = infections.hi),
+              alpha = .6) +
+  facet_wrap(~state, ncol=5, scales = "free_y",
+              labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(axis.text.x=element_text(size=6),
+          axis.text.y = element_text(size=8),
+          legend.position = "top") +
+  scale_fill_manual(values =pal,
+                    labels = TeX(names(pal)),
+                    name='',
+                    breaks="Covidestim")  +
+  labs(y = "Estimated Infections",
+       title = paste0("Estimated Infections by State")) +
+  guides(color = guide_legend(override.aes = list(linewidth =2),
+                              nrow=2,
+                              byrow=TRUE))
+
+
+ggsave(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 ```
 
 
-# Ratio of Estimated to Observed During Omicron 
+## Ratio of Estimated to Observed
 
 
-```{r,results='hide', fig.height=11,fig.width=8}
 
-subset <- state_res %>%
-  filter(vlabel == "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$")
+```{r, fig.height=10,fig.width=12}
+
+subset %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb/positive,
+             ymax = exp_cases_ub/positive,
+             fill = vlabel),
+             alpha = .9,
+             show.legend=FALSE,
+             fill= "#247C90") +
+  facet_wrap(~state, ncol=5, 
+              labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(axis.text.x=element_text(size=6),
+          axis.text.y = element_text(size=8),
+          legend.position = "top") +
+  scale_fill_manual(values =pal,
+                    labels = TeX(names(pal)),
+                    name='',
+                    breaks="Covidestim")  +
+  labs(y = "Ratio of Estimated Infections to Observed",
+       x="",
+       title = paste0("Ratio of Estimated Infections to Observed by State")) +
+  guides(color = guide_legend(override.aes = list(linewidth =2),
+                              nrow=2,
+                              byrow=TRUE))
+
+
+ggsave(here('figures/ratio-estimated-to-observed-all-states.pdf'))
+
+```
+
+
+# Comparing States at Specific Two-week Intervals 
+
+## During Alpha Wave
+
+```{r, fig.height=9,fig.width=8}
+
+plt1 <- subset %>% 
+  # left_join(codes) %>%
+  filter(biweek == 7) %>%
+  ggplot(aes(y =fct_reorder(name,exp_cases_median/positive),
+             xmin = exp_cases_lb/positive,
+             xmax = exp_cases_ub/positive)) +
+  geom_errorbar() +
+  # geom_point(aes(y=state_name,x=exp_cases_median/positive),
+  #            color = "darkred", size=.8, alpha=.5) +
+  theme_c() + 
+  theme(axis.text.y=element_text(size=10),
+        axis.text.x = element_text(size=11),
+        axis.title = element_text(size = 17),
+        plot.subtitle = element_text(size=14),
+        plot.title = element_text(size=17, face="plain")) +
+  labs(y="", x="Ratio of Estimated Infections\nto Observed",
+       title ="During Two-week Period\nin the Alpha Wave",
+       subtitle = "March 26, 2021 through April 8, 2021")
+
+plt1
+
+```
+
+
+
+## During Delta Wave
+
+```{r, fig.height=9,fig.width=8, results='hide'}
+
+subset %>%
+  mutate(ratio = exp_cases_median/positive) %>%
+  group_by(biweek) %>%
+  summarize(mean = mean(ratio),
+            mindate=min(date),
+            maxdate=max(date)) %>%
+  arrange(desc(mean)) 
+
+```
+
+```{r, fig.height=9,fig.width=8}
+
+plt2 <- subset %>% 
+  # left_join(codes) %>%
+  filter(biweek == 13) %>%
+  ggplot(aes(y =fct_reorder(name,exp_cases_median/positive),
+             xmin = exp_cases_lb/positive,
+             xmax = exp_cases_ub/positive)) +
+  geom_errorbar() +
+  # geom_point(aes(y=state_name,x=exp_cases_median/positive),
+  #            color = "darkred", size=.8, alpha=.5) +
+  theme_c() + 
+ theme(axis.text.y=element_text(size=10),
+        axis.text.x = element_text(size=11),
+        axis.title = element_text(size = 17),
+        plot.subtitle = element_text(size=14),
+        plot.title = element_text(size=17, face="plain")) +
+  labs(y="", x="Ratio of Estimated Infections\nto Observed",
+       title ="During Two-week Period\nin the Delta Wave",
+       subtitle = "June 18, 2021 through July 1, 2021")
+
+plt2
+
+```
+
+## During Omicron Wave
+
+
+```{r,results='hide', fig.height=9,fig.width=8}
 
 subset %>% 
   left_join(codes) %>%
@@ -261,25 +514,52 @@ subset %>%
   pull(date) %>% 
   range()
 
+
 subset %>% 
   left_join(codes) %>%
+  filter(biweek == 13) %>%
+  pull(date) %>% 
+  range()
+
+
+plt3 <- subset %>% 
+  # left_join(codes) %>%
   filter(biweek == 27) %>%
-  ggplot(aes(y =fct_reorder(state_name,exp_cases_median/positive),
+  ggplot(aes(y =fct_reorder(name,exp_cases_median/positive),
              xmin = exp_cases_lb/positive,
              xmax = exp_cases_ub/positive)) +
   geom_errorbar() +
   # geom_point(aes(y=state_name,x=exp_cases_median/positive),
   #            color = "darkred", size=.8, alpha=.5) +
   theme_c() + 
-  theme(axis.text.y=element_text(size=15),
-        axis.text.x = element_text(size=13),
-        axis.title = element_text(size = 18),
-        plot.subtitle = element_text(size=14)) +
-  labs(y="", x="Ratio of Estimated Infections to Observed",
-       title ="Ratio of Estimated Infections to Observed Infections\nDuring Omicron",
+  theme(axis.text.y=element_text(size=10),
+        axis.text.x = element_text(size=11),
+        axis.title = element_text(size = 17),
+        plot.subtitle = element_text(size=14),
+        plot.title = element_text(size=17, face="plain")) +
+  labs(y="", x="Ratio of Estimated Infections\nto Observed",
+       title ="During Two-week Period\nin the Omicron Wave",
        subtitle = "December 31, 2021 through January 14, 2022")
+
+plt3
 
 
 ```
 
+
+
+## All Waves Together
+
+```{r, fig.height=10, fig.width=17}
+
+plt <- plot_grid(plt1,plt2, plt3, nrow=1, align="none")
+
+title <- ggplot() +
+  labs(title = "Ratio of Estimated Infections to Observed Infections") +
+  theme_c(plot.title=element_text(size=25))
+
+plot_grid(title, plt, nrow=2, rel_heights= c(.05,.95))
+
+
+```
 

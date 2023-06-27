@@ -27,6 +27,15 @@ include_graphics(here("figures/emp-estimate-beta-dist-by-state.pdf"))
 
 ```
 
+# Details on Each Implementation
+
+
+## COVID-19 Trends and Impact Survey 
+
+
+# County Results by Implementation
+
+
 
 # Sensitivity Analyses 
 

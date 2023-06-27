@@ -150,7 +150,7 @@ versions <- tibble(
     "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
         "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
          "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
-        "$\\,$CTIS Priors that Do Not Vary by Date$\\,$"
+        "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ),
     levels = c(
         "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
@@ -159,7 +159,7 @@ versions <- tibble(
         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
         "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
          "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
-        "$\\,$CTIS Priors that Do Not Vary by Date$\\,$"
+        "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
        
     ) )
 )
@@ -1131,6 +1131,7 @@ county_dat <- county %>%
          maxdate = max(date)) %>%
   ungroup() %>%
   left_join(county_names, by=c('fips'='fips')) %>%
+  left_join(versions) %>%
   mutate(name = ifelse(fips =="25007,25019", "Nantucket and Dukes", name))
 
 
@@ -1168,6 +1169,50 @@ county_dat %>%
 
 
 ```
+
+
+```{r}
+
+
+
+county_dat %>%
+  filter(fips %in% sample(unique(.data$fips),2))  %>% 
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub),
+             alpha = .5,
+             show.legend=FALSE,
+             fill="#596281") +
+   geom_linerange(aes(xmin = mindate,
+                      xmax=maxdate,
+                      y = positive,
+                      color = 'obs'),
+                  size=.5) +
+  facet_grid(name~vlabel, 
+             labeller=labeller(vlabel =as_labeller(
+               TeX, default=label_parsed)),
+             scales="free_y") +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          ) +
+  scale_fill_manual(values = pal)  +
+  labs(x="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "Counties in Massachusetts") +
+  scale_color_manual(values = c('obs' = 'red'), labels = 'Positive Tests',
+                     name = '') +
+  guides(color = guide_legend(override.aes = list(linewidth =2)))
+
+
+```
+
+
+
 
 ## Ratio of Estimated Infections to Observed
 
