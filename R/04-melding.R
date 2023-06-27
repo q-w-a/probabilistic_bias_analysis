@@ -15,34 +15,58 @@ get_melded <- function(alpha_mean = 0.9,
                        p_s0_pos_bounds = NA,
                        pre_nsamp = 1e4,
                        post_nsamp = 1e3,
-                       include_corrected = TRUE,
                        bde = FALSE,
-                       quiet=TRUE) {
+                       quiet=TRUE,
+                       direct_params=FALSE,
+                       beta_shape1=NULL,
+                       beta_shape2=NULL,
+                       s_untested_shape1=NULL,
+                       s_untested_shape2) {
   
   
   given_args <- as.list(environment())
   
-  if (!quiet) {
+  if(!quiet) {
     cat("Arguments to get_melded:\n")
     print(given_args)
   } 
   
-  
-  theta <- tibble(alpha = sample_gamma_density(pre_nsamp,
-                                               mean = alpha_mean,
-                                               sd = alpha_sd,
-                                               bounds = alpha_bounds),
-                  beta= sample_beta_density(pre_nsamp,
-                                            mean = beta_mean,
-                                            sd = beta_sd,
-                                            bounds = beta_bounds),
-                  P_S_untested = sample_beta_density(pre_nsamp,
-                                                     mean = s_untested_mean,
-                                                     sd = s_untested_sd,
-                                                     bounds = s_untested_bounds)) %>%
-    mutate(phi_induced = est_P_A_testpos(P_S_untested = P_S_untested,
-                                         alpha = alpha,
-                                         beta=beta))
+  if(!direct_params) {
+    
+    theta <- tibble(alpha = sample_gamma_density(pre_nsamp,
+                                                 mean = alpha_mean,
+                                                 sd = alpha_sd,
+                                                 bounds = alpha_bounds),
+                    beta= sample_beta_density(pre_nsamp,
+                                              mean = beta_mean,
+                                              sd = beta_sd,
+                                              bounds = beta_bounds),
+                    P_S_untested = sample_beta_density(pre_nsamp,
+                                                       mean = s_untested_mean,
+                                                       sd = s_untested_sd,
+                                                       bounds = s_untested_bounds)) %>%
+      mutate(phi_induced = est_P_A_testpos(P_S_untested = P_S_untested,
+                                           alpha = alpha,
+                                           beta=beta))
+    
+  }
+  if(direct_params) {
+    message("Direct params")
+    theta <- tibble(alpha = sample_gamma_density(pre_nsamp,
+                                                 mean = alpha_mean,
+                                                 sd = alpha_sd,
+                                                 bounds = alpha_bounds),
+                    beta = rbeta(pre_nsamp,
+                                shape1=beta_shape1,
+                                shape2=beta_shape2),
+                    P_S_untested = rbeta(pre_nsamp,
+                                         shape1=s_untested_shape1,
+                                         shape2=s_untested_shape2)) %>%
+      mutate(phi_induced = est_P_A_testpos(P_S_untested = P_S_untested,
+                                           alpha = alpha,
+                                           beta=beta))
+    
+  }
   
   # theta contains values sampled from alpha, beta, P_S_untested, and M(theta) = phi_induced
   # induced phi
@@ -51,7 +75,9 @@ get_melded <- function(alpha_mean = 0.9,
   # approximate induced distribution via a density approximation
   if(bde) {
     message("Beta Kernel Density Estimation")
-    phi_induced_density <- kdensity::kdensity(x = phi,  bw="SJ", adjust = 1, start = "beta", kernel = "beta", support = c(0,1))
+    phi_induced_density <- kdensity::kdensity(x = phi,  bw="SJ", adjust = 1,
+                                              start = "beta", kernel = "beta",
+                                              support = c(0,1))
     phi_sampled_density <- phi_induced_density(phi) 
   }
   else {
@@ -88,6 +114,10 @@ get_melded <- function(alpha_mean = 0.9,
   
   
 }
+
+
+
+
 
 
 
