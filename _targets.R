@@ -133,7 +133,11 @@ list(
   tar_target(
     name = state_v7,
     command = get_v7_state(
-      data = tests_biweekly_state
+      data = tests_biweekly_state,
+      beta_shape = get_shape(ctis_smoothed,
+                             option="beta"),
+      s_untested_shape = get_shape(ctis_smoothed,
+                                   option="s_untested")
     )
   ),
   
@@ -208,7 +212,11 @@ list(
   tar_target(
     name = ma_v7,
     command = get_county_v7(
-      data = ma_biweekly_county
+      data = ma_biweekly_county,
+      beta_shape = get_shape(ctis_smoothed,
+                             option="beta"),
+      s_untested_shape = get_shape(ctis_smoothed,
+                                   option="s_untested")
     )
   ),
   
