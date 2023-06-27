@@ -519,23 +519,82 @@ get_v6_corrected <- function(state_testing, params) {
   
 }
 
+objective <- function(shapes, x, prob, ...) {
+  fit <- pbeta(x, shapes[1], shapes[2])
+  # return sum of squares
+  return(sum((fit-prob)^2))
+}
+
+
+
+get_shape <- function(ctis_smoothed, option, quiet=FALSE) {
+  
+  if (option=="beta") {
+    ctis_quantiles <- ctis_smoothed %>%
+      summarize(q1 = quantile(beta_estimate_spline_smoothed,.025, na.rm=TRUE),
+                median = median(beta_estimate_spline_smoothed, na.rm=TRUE),
+                q2 = quantile(beta_estimate_spline_smoothed,.975, na.rm=TRUE),
+                sd=sd(beta_estimate_spline_smoothed,na.rm=TRUE))
+    
+
+  }
+  if (option=="s_untested") {
+    ctis_quantiles <- ctis_smoothed %>%
+      summarize(q1 = quantile(s_untested_smoothed,.025, na.rm=TRUE),
+                median = median(s_untested_smoothed, na.rm=TRUE),
+                q2 = quantile(s_untested_smoothed,.975, na.rm=TRUE),
+                sd=sd(s_untested_smoothed, na.rm=TRUE))
+    
+  }
+  
+  start <- get_beta_params(ctis_quantiles$q1, ctis_quantiles$sd) %>%
+    unlist()
+  
+  optim_results <- nlm(objective, start, 
+             x=c(ctis_quantiles$q1, ctis_quantiles$median, ctis_quantiles$q2),
+             prob=c(.025,.5,.975), lower=0, upper=1,
+             typsize=c(1,1), fscale=1e-14, gradtol=1e-14)
+  
+  params <- (optim_results$estimate) 
+  
+  if(!quiet) {
+    message(paste0("Input quantiles (0.025, .5, .975):\n",
+                   round(ctis_quantiles$q1,4), ", ",
+                   round(ctis_quantiles$median,4), ", ",
+                   round(ctis_quantiles$q2,4)))
+    sim <- rbeta(1e4, params[1], params[2])
+    output_quantiles <- list(q1=quantile(sim,.025),
+                          median=median(sim),
+                          q2=quantile(sim, .975))
+    message(paste0("Output quantiles (0.025, .5, .975):\n",
+                   round(output_quantiles$q1,4), ", ",
+                   round(output_quantiles$median,4), ", ",
+                   round(output_quantiles$q2,4)))
+    
+    
+  }
+  
+  return(params)
+  
+  
+}
 
 
 #---------------- Version 7 --------------
 
-get_v7_state <- function(data, testing = FALSE) {
+get_v7_state <- function(data, beta_shape, s_untested_shape, testing = FALSE) {
   
   params <-  list(
     alpha_mean = .95,
     alpha_sd = 0.08,
     alpha_bounds = NA,
     # alpha_bounds = c(.8,1),
-    beta_mean = .18,
-    beta_sd =.09,
+    beta_shape1 = beta_shape[1],
+    beta_shape2 = beta_shape[2],
     beta_bounds = NA,
     #  beta_bounds = c(0.002, 0.4),
-    s_untested_mean = .016,
-    s_untested_sd = .0225,
+    s_untested_shape1 = s_untested_shape[1],
+    s_untested_shape2 = s_untested_shape[2],
     #  s_untested_bounds = c(0.0018, Inf),
     s_untested_bounds = NA,
     p_s0_pos_mean = .4,
@@ -543,7 +602,8 @@ get_v7_state <- function(data, testing = FALSE) {
     p_s0_pos_bounds = NA,
     #  p_s0_pos_bounds = c(.25, .7),
     pre_nsamp = 1e6,
-    post_nsamp = 1e5)
+    post_nsamp = 1e5,
+    direct_params=TRUE)
   
   state_testing <- data
   

@@ -421,20 +421,19 @@ get_v6_county_corrected <- function(county_testing, params) {
 
 
 #----------------- Version 7 ------------------------
-#---------- Version 1 -------------
-get_county_v7 <- function(data, testing = FALSE) {
+get_county_v7 <- function(data, beta_shape, s_untested_shape, testing = FALSE) {
   
   params <-  list(
     alpha_mean = .95,
     alpha_sd = 0.08,
     alpha_bounds = NA,
     # alpha_bounds = c(.8,1),
-    beta_mean = .18,
-    beta_sd =.09,
+    beta_shape1 = beta_shape[1],
+    beta_shape2 = beta_shape[2],
     beta_bounds = NA,
     #  beta_bounds = c(0.002, 0.4),
-    s_untested_mean = .016,
-    s_untested_sd = .0225,
+    s_untested_shape1 = s_untested_shape[1],
+    s_untested_shape2 = s_untested_shape[2],
     #  s_untested_bounds = c(0.0018, Inf),
     s_untested_bounds = NA,
     p_s0_pos_mean = .4,
