@@ -17,7 +17,7 @@ knit: (function(input, ...) {
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=FALSE)
 
 library(tidyverse)
 library(targets)
@@ -25,6 +25,10 @@ library(here)
 library(scales)
 library(latex2exp)
 library(cowplot)
+
+
+filter_versions <- FALSE
+save_figures <- FALSE
 
 ```
 
@@ -57,7 +61,7 @@ versions <- tibble(
 
 
 # read state-level results
-targets_dir <- here("_targets_6_26")
+targets_dir <- here("_targets")
 
 state_res <- tar_read(state_v1, 
                    store =targets_dir) %>% 
@@ -107,9 +111,11 @@ state_res <- state_res %>%
   ungroup()
 
 
+if(filter_versions){
+  state_res <- state_res %>%
+  filter(version %in% c("v3", "v5", "v6", "v7")) 
 
-state_res <- state_res %>%
-  filter(version %in% c("v2", "v5", "v6", "v7")) 
+}
 
 
 ```
@@ -182,6 +188,7 @@ theme_c <- function(...){
 
 
 by_version <- state_res %>%
+ # filter(biweek >=6) %>% 
   select(-date) %>%
   distinct() %>% 
   mutate(in_interval = case_when(
@@ -222,8 +229,7 @@ by_version %>%
   labs(x="", 
        y= "Proportion",
        fill = "Covidestim Median:",
-       title = "Proportion of Simulation Intervals Where Covidestim Median\nWas Within, Above, or Below the Median",
-       subtitle = "Including All States") +
+       title = "Proportion of Simulation Intervals Where Covidestim Median\nWas Within, Above, or Below the Median") +
   theme_c() +
   theme_c(legend.position="right",
           legend.title = element_text(face="bold", size = 15),
@@ -239,6 +245,39 @@ by_version %>%
   scale_x_discrete(labels = (TeX(labels)))
 
 
+```
+
+```{r,eval=save_figures, fig.width=14}
+
+ggsave(here('figures/concordance-covidestim-state.pdf'))
+
+
+```
+
+
+```{r, fig.width=17}
+
+by_version %>%
+  group_by(vlabel) %>%
+  filter(in_interval == "In Interval") %>%
+  mutate(n_interval = n) %>%
+  ggplot(aes(y=fct_reorder(vlabel,prop), x=prop)) +
+  geom_text(aes(label=round(prop,3), x= prop+.03), 
+             angle=0) +
+  geom_bar(stat="identity", fill="#596281") +
+  scale_y_discrete(breaks= unique(by_version$vlabel),
+                   labels=function(x)TeX(x)) +
+  scale_x_continuous(expand=c(0,0), 
+                     limits=c(0,.9), n.breaks=7)  +
+  theme_c(axis.text.y = element_text(size = 13, hjust=1),
+          axis.title.x = element_text(size=14),
+          axis.text.x=element_text(size=10)) +
+  labs(y="",
+       x="Proportion Containing the Covidestim Median",
+       title="Proportion Containing the Covidestim Median",
+       subtitle = "By Implementation")
+
+ 
 
 ```
 
@@ -300,8 +339,9 @@ state_res %>%
 
 ## Compare Versions
 
+### All Versions 
 
-```{r}
+```{r, fig.width=18,fig.height=8}
 
 
 subset <- state_res %>%
@@ -309,7 +349,7 @@ subset <- state_res %>%
 
 pal <- c("#247C90", "red")
 
-names(pal) <- c(unique(subset$vlabel), "Covidestim")
+names(pal) <- c(as.character(unique(subset$vlabel)), "Covidestim")
 
 
 state_res %>%
@@ -350,11 +390,48 @@ state_res %>%
 
 
 
+
 ```
+
+### Original Priors versus CTIS Priors (that do not vary)
+
+```{r}
+
+
+state_res %>%
+  filter(version %in% c("v1","v7") & state %in% sample(unique(.$state),15)) %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub,
+             fill=vlabel),
+             alpha = .6,
+             show.legend=FALSE,
+             ) +
+  facet_wrap(~name, 
+             labeller=labeller(vlabel =as_labeller(
+               TeX, default=label_parsed),
+               nrow=3),
+             scales="free_y") +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          ) +
+  viridis::scale_fill_viridis(option="magma", begin=.1,end=.9, discrete=TRUE)  +
+  labs(x="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "By State") 
+
+
+```
+
 
 ## Compare States
 
-```{r, fig.height=11, fig.height=9}
+```{r, fig.height=14, fig.width=11}
 
 subset %>%
    ggplot() +
@@ -369,24 +446,36 @@ subset %>%
                   ymin = infections.lo,
                   ymax = infections.hi),
               alpha = .6) +
-  facet_wrap(~state, ncol=5, scales = "free_y",
+  facet_wrap(~name, ncol=4, scales = "free",
               labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
   scale_y_continuous(labels = comma) +
-  scale_x_date(date_breaks = "3 months", 
+  scale_x_date(date_breaks = "3.5 months", 
                date_labels = "%b %Y") +
-  theme_c(axis.text.x=element_text(size=6),
-          axis.text.y = element_text(size=8),
-          legend.position = "top") +
+  theme_c(axis.text.x=element_text(size=5),
+          axis.text.y = element_text(size=4.5),
+          legend.position = "top",
+          legend.text=element_text(size=12),
+          strip.text.x=element_text(size=8,
+                                    face='plain',
+                                    color='white')) +
   scale_fill_manual(values =pal,
                     labels = TeX(names(pal)),
-                    name='',
-                    breaks="Covidestim")  +
+                    name=''
+                    #,
+                  # , breaks="Covidestim"
+                    )  +
   labs(y = "Estimated Infections",
        title = paste0("Estimated Infections by State")) +
   guides(color = guide_legend(override.aes = list(linewidth =2),
                               nrow=2,
                               byrow=TRUE))
 
+
+
+
+```
+
+```{r,eval=save_figures, fig.height=14, fig.width=9}
 
 ggsave(here('figures/intervals-and-covidestim-all-states.pdf'))
 
@@ -427,6 +516,9 @@ subset %>%
                               nrow=2,
                               byrow=TRUE))
 
+```
+
+```{r,eval=save_figures, fig.height=10,fig.width=12}
 
 ggsave(here('figures/ratio-estimated-to-observed-all-states.pdf'))
 
@@ -456,9 +548,12 @@ plt1 <- subset %>%
         plot.title = element_text(size=17, face="plain")) +
   labs(y="", x="Ratio of Estimated Infections\nto Observed",
        title ="During Two-week Period\nin the Alpha Wave",
-       subtitle = "March 26, 2021 through April 8, 2021")
+       subtitle = "March 26, 2021 through April 8, 2021") +
+  xlim(0,65)
 
 plt1
+
+
 
 ```
 
@@ -497,7 +592,8 @@ plt2 <- subset %>%
         plot.title = element_text(size=17, face="plain")) +
   labs(y="", x="Ratio of Estimated Infections\nto Observed",
        title ="During Two-week Period\nin the Delta Wave",
-       subtitle = "June 18, 2021 through July 1, 2021")
+       subtitle = "June 18, 2021 through July 1, 2021") +
+  xlim(0,65)
 
 plt2
 
@@ -529,8 +625,6 @@ plt3 <- subset %>%
              xmin = exp_cases_lb/positive,
              xmax = exp_cases_ub/positive)) +
   geom_errorbar() +
-  # geom_point(aes(y=state_name,x=exp_cases_median/positive),
-  #            color = "darkred", size=.8, alpha=.5) +
   theme_c() + 
   theme(axis.text.y=element_text(size=10),
         axis.text.x = element_text(size=11),
@@ -539,7 +633,8 @@ plt3 <- subset %>%
         plot.title = element_text(size=17, face="plain")) +
   labs(y="", x="Ratio of Estimated Infections\nto Observed",
        title ="During Two-week Period\nin the Omicron Wave",
-       subtitle = "December 31, 2021 through January 14, 2022")
+       subtitle = "December 31, 2021 through January 14, 2022") +
+  xlim(0,65)
 
 plt3
 
@@ -552,14 +647,234 @@ plt3
 
 ```{r, fig.height=10, fig.width=17}
 
-plt <- plot_grid(plt1,plt2, plt3, nrow=1, align="none")
+plt <- plot_grid(plt1,plt2, plt3, nrow=1, align="none", labels="auto", label_size=19)
 
 title <- ggplot() +
   labs(title = "Ratio of Estimated Infections to Observed Infections") +
   theme_c(plot.title=element_text(size=25))
 
-plot_grid(title, plt, nrow=2, rel_heights= c(.05,.95))
+plot_grid(title, plt, nrow=2, 
+          rel_heights= c(.05,.95))
+
 
 
 ```
 
+```{r,eval=save_figures, fig.height=10, fig.width=17}
+
+ggsave(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
+
+
+
+```
+
+```{r}
+
+subset %>% 
+  # left_join(codes) %>%
+  filter(biweek %in% c(7, 13, 27))  %>%
+  select(-date) %>%
+  distinct() %>%
+  group_by(state) %>%
+  mutate(ord = empirical_testpos[which(biweek==7)]) %>%
+  mutate(biweek=factor(biweek)) %>%
+  ggplot(aes(y=fct_reorder(state,ord),
+             x=empirical_testpos,fill=biweek)) +
+  geom_bar(stat="identity",position="dodge")+
+  theme_c() +
+  theme_c() +
+  labs(title = "Testing Positivity by State",
+       y="",
+       x="Biweekly Testing Positivity",
+       fill="") +
+  scale_x_continuous(n.breaks=10)
+
+
+subset %>% 
+  # left_join(codes) %>%
+  filter(biweek %in% c(7, 13, 27))  %>%
+  group_by(biweek) %>%
+  mutate(daterange= paste(format(min(date), "%B %d %Y"),
+                          "to", 
+                          format(max(date), "%B %d %Y")),
+         daterange=factor(
+           daterange,
+           levels=c(
+             "March 26 2021 to April 08 2021",
+             "June 18 2021 to July 01 2021",
+             "December 31 2021 to January 14 2022"))) %>%
+  select(-date) %>%
+  distinct() %>%
+  group_by(state) %>%
+  mutate(testrate=total/population,
+         ord = testrate[which(biweek==7)]) %>%
+  mutate(biweek=factor(biweek)) %>%
+  ggplot(aes(y=fct_reorder(name,ord,.desc=TRUE),
+             x=testrate,fill=daterange)) +
+  geom_bar(stat="identity",position="dodge") +
+  theme_c() +
+  labs(title = "Testing Rate by State",
+       y="",
+       x="Biweekly Testing Rate",
+       fill="") +
+  scale_x_continuous(n.breaks=10)
+
+
+compare_testrates <- subset %>%
+  mutate(testrate=total/population) %>%
+  select(-date) %>%
+  distinct() %>%
+  filter(biweek %in% c(7, 13, 27))  %>%
+  select(biweek,state,testrate) %>%
+  pivot_wider(names_from=biweek, values_from=testrate, names_prefix="biweek_") %>%
+  mutate(omicron_over_alpha = biweek_27/biweek_7,
+         omicron_over_delta = biweek_27/biweek_13) %>%
+  select(state,contains("omicron")) %>%
+  pivot_longer(c(omicron_over_alpha,omicron_over_delta)) %>%
+  group_by(name) %>%
+  summarize(mean_val = mean(value))
+
+cat("The testing rate during this two-week interval during the omicron wave was", compare_testrates %>% filter(name=="omicron_over_alpha") %>% pull(mean_val), "times the testing rate during this time interval in the alpha wave.") 
+
+
+
+cat("The testing rate during this two-week interval during the omicron wave was", compare_testrates %>% filter(name=="omicron_over_delta") %>% pull(mean_val), "times the testing rate during this time interval in the delta wave.") 
+
+
+```
+
+
+# Rank Ratio of Estimated to Observed Over Time 
+
+```{r,fig.height=8}
+
+ranks <- subset %>%
+  mutate(ratio = exp_cases_median/positive,
+         tested = total/population) %>%
+  # one observation per biweek per state
+  select(biweek, date, ratio, name,tested) %>%
+  group_by(biweek,ratio,name,tested) %>%
+  summarize(date=min(date)) %>%
+  # rank for each time interval
+  group_by(biweek) %>%
+  mutate(rank = rank(ratio),
+         rank_tested=rank(-tested))
+
+
+r <- ranks %>%
+  mutate(rank_group = case_when(
+    rank <= 10 ~  "Top 10",
+    rank > 41 ~ "Bottom 10",
+    TRUE ~ "Middle" )) %>%
+  group_by(name, rank_group) %>%
+  mutate(n=n()) %>%
+  group_by(name) %>%
+  mutate(total =n(),
+         max_group = rank_group[which.max(n)]) %>%
+  filter( max(n) >24) %>%
+  filter(max_group != "Middle")  %>%
+  ungroup()
+
+
+top_10 <- r %>% filter(rank_group=="Top 10") %>%
+  arrange(desc(n)) %>% pull(name) %>%
+  unique() %>%paste(collapse=", ")
+
+cat("States that consistently have the lowest ratios:", top_10)
+
+
+bottom_10 <- r %>% filter(rank_group=="Bottom 10") %>%
+  arrange(desc(n)) %>% pull(name) %>%
+  unique() %>%paste(collapse=", ")
+
+
+cat("States that consistently have the highest ratios:", bottom_10)
+
+
+
+end_labs <- r %>%
+  ungroup() %>%
+  filter(date==max(date)) %>%
+  mutate(date = date + days(10)) %>%
+  select(name, rank, date) %>%
+  ungroup()
+
+```
+
+```{r}
+
+##############################
+# RANK PLOT OVER TIME
+##############################
+# 
+# set.seed(999)
+# 
+# pal1 <-viridis_pal(option="viridis", end = .9, begin=.3)(3)
+# pal2 <- viridis_pal(option="rocket", end = .9, begin=.3)(2)
+# pal3 <- viridis_pal(option="magma", end = .9, begin=.3)(2)
+# pal4 <- viridis_pal(option="mako", end = .8, begin=.3)(2)
+# pal5 <- viridis_pal(option="cividis", end = .9, begin=.1)(3)
+# 
+# 
+# rankpal <- c(pal1, pal2, pal3,pal4,pal5)
+# indexes <- sample.int(length(rankpal), replace=FALSE)
+# rankpal <- rankpal[indexes]
+
+
+set.seed(123)
+
+rankpal <- c("#b4ddd4", "#7b2c31", "#65d04b",
+             "#da239b", "#b7d165", "#453fbc", 
+             "#658114", "#af3fe8", "#ffb947",
+             "#0a60a8", "#f87945", "#16d0ae")
+
+rankpal <- c("#851657", "#be3acd", "#19a71f",
+             "#824598", "#ed820a", "#BB8E37",
+             "#974810", "#1f84ec", "#d02023",
+             "#059dc5", "#f23387", "#16d0ae")
+
+indexes <- sample.int(length(rankpal), replace=FALSE)
+rankpal <- rankpal[indexes]
+
+
+
+r %>%
+ # filter(rank_group!="Middle") %>%
+  ggplot() +
+  geom_point(aes(x=date,y=rank, 
+             group=name,
+             color= name),
+             size=.5) +
+  geom_line(aes(x=date,y=rank, 
+             group=name,
+             color= name)) +
+ # facet_wrap(~max_group) +
+  ggrepel::geom_text_repel( aes(x= date-days(4),
+                y = rank,
+                color=name,
+                label = name),
+           end_labs,
+           min.segment.length=2,
+           nudge_y=0,
+           hjust=0,
+           size=3,
+           direction="y",
+           force_pull=9,
+           box.padding=.15) +
+  theme_c(legend.position="none",
+          axis.text.x = element_text(angle =0,size=14)) +
+  # theme(plot.subtitle =element_text(size=18),
+  #       axis.title.x=element_text(size=16),
+  #       axis.title.y=element_text(size=16)) +
+ # scale_color_brewer(palette="Dark2")  +
+  scale_color_manual(values=rankpal) +
+  scale_x_date(date_breaks="2 months", date_labels = "%b %Y",
+               limits = c(ymd("2021-01-01"),
+                          ymd("2022-04-15"))) +
+  labs(y = "Rank of Ratio",
+       title = "Rank of Estimated Infections to Observed Infections Over Time",
+       subtitle = "For States Ranked in the Top or Bottom 10\nfor More Than 80% of Time Intervals",
+       x="Date") +
+  scale_y_reverse(breaks=seq(1,51, by=9))
+
+```
