@@ -32,6 +32,33 @@ library(here)
 
 # Results
 
+## State-level Estimates
+
+For simplicity, at the state-level we focus on the implementation that does not vary by state or date. This also allows us to consider the entirety of 2021, since survey data is only available for dates after March 20, 2021. A full comparison of implementations is included in Supplementary Figure covidestim-concordance-state. 
+
+In Figure \@ref(fig:ratio-estimated-to-observed-by-wave), we consider three distinct two-week intervals during waves of the pandemic in 2021. 
+
+Although prevalence of COVID-19 was highest during the time interval during the Omicron wave, we see that the ratio of estimated infections to observed infections is higher during the time intervals in the alpha and delta waves. This distinction is explained by the differences in testing rates during these period: the testing rate during this two-week interval during the omicron wave was 2.4 times that of the alpha wave and 4.9 times that of the delta wave.
+
+Several states consistently have among the highest or lowest ratios of estimated to observed infections. In particular, there are 6 states with among the lowest 10 ratios of estimated infections to observed infections, and as such the highest case ascertainment rates, for more than 80% of time intervals considered. These states were Rhode Island, Massachusetts, District of Columbia, Alaska, New York, and Vermont. Meanwhile, states that had the highest ratios, and equivalently the lowest case ascertainment rates, include Mississippi, South Dakota, Oklahoma, Nebraska, and Tennessee.
+
+
+```{r ratio-estimated-to-observed-by-wave, fig.cap="The ratio of estimated infections to observed infections for three time intervals of interest: one during the alpha wave, one during the delta wave, and one during the omicron wave. Although the prevalence of COVID-19 was highest during the omicron wave, the ratios of estimated to observed infections are higher for the time intervals during the alpha and delta waves, a difference that was driven by lower testing rates during these times. The trend we see in these three time intervals where Mississippi, South Dakota, Oklahoma, Nebraska, and Tennessee have among the highest ratios of estimated infections to observed infections, and as such the lowest case ascertainment rates, is consistent across the full set of time intervals considered from January of 2021 to March of 2022."}
+
+include_graphics(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
+
+```
+
+In Figure \@ref(fig:simulation-intervals-state), we see the simulation intervals for all two-week intervals and all states.
+
+```{r simulation-intervals-state, fig.cap="Simulation intervals for each 2-week interval considered, for all states. For any given state, each vertical bar shows the 2.5\\% percentile and 97.5\\% percentile for the total number of infections in that two-week interval. Covidestim intervals summed over the same two-week time-scale are shown in red. The scale on the $y$-axis is distinct across states to highlight differences across time within each state."}
+
+include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
+
+```
+
+
+
 ## County Level Estimates in Massachusetts
 
 ### Comparison to Wastewater Data and Covidestim Estimates
@@ -56,27 +83,6 @@ NOTE add (a), (b) to this figure
 
 include_graphics(here('figures/simulation-intervals-county.pdf'))
 
-
-```
-
-
-
-## State-level Estimates
-
-For simplicity, at the state-level we focus on the implementation that does not vary by state or date. This also allows us to consider the entirety of 2021, since survey data is only available for dates after March 20, 2021. A full comparison of implementations is included in Supplementary Figure covidestim-concordance-state. 
-
-In Figure \@ref(fig:ratio-estimated-to-observed-by-wave), we consider three distinct two-week intervals during waves of the pandemic in 2021. Simulation intervals for all two-week intervals for all states are shown in Supplementary Figure sim-intervals-state.
-
-Although prevalence of COVID-19 was highest during the time interval during the Omicron wave, we see that the ratio of estimated infections to observed infections is higher during the time intervals in the alpha and delta waves. This distinction is explained by the differences in testing rates during these period: the testing rate during this two-week interval during the omicron wave was 2.4 times that of the alpha wave and 4.9 times that of the delta wave.
-
-Several states consistently have among the highest or lowest ratios of estimated to observed infections. In particular, there are 6 states with among the lowest 10 ratios of estimated infections to observed infections, and as such the highest case ascertainment, for more than 80% of time intervals considered. These states were Rhode Island, Massachusetts, District of Columbia, Alaska, New York, and Vermont. Meanwhile, states that had the highest ratios, and equivalently the lowest case ascertainment, include Mississippi, South Dakota, Oklahoma, Nebraska, and Tennessee.
-
-
-
-
-```{r ratio-estimated-to-observed-by-wave, fig.cap="The ratio of estimated infections to observed infections for three time intervals of interest: one during the alpha wave, one during the delta wave, and one during the omicron wave. Although the prevalence of COVID-19 was highest during the omicron wave, the ratios of estimated to observed infections are higher for the time intervals during the alpha and delta waves, a difference that was driven by lower testing rates during these times. The trend we see in these three time intervals where Mississippi, South Dakota, Oklahoma, Nebraska, and Tennessee have among the highest ratios of estimated infections to observed infections, and as such the lowest case ascertainment rates, is consistent across the full set of time intervals considered from January of 2021 to March of 2022."}
-
-include_graphics(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
 
 ```
 
