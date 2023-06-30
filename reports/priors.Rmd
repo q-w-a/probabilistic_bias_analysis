@@ -318,7 +318,7 @@ ctis <- ctis_raw %>%
 
 ```
 
-```{r ctis-by-state, fig.cap ="Since $\\beta$ represents the ratio of $\\Pr(\\text{test}_+|\\text{untested}, S_0)$ to $\\Pr(\\text{test}_+|\\text{tested})$, we estimate $\\beta$ from the COVID-19 Trends and Impact Survey as the ratio of the screening test positivity over the overall test positivity. Here, we consider the 2.5\\% and 97.5\\% percentiles and mean for each state. Most have a mean near $20%$.", fig.width=9}
+```{r ctis-by-state, fig.cap ="Since $\\beta$ represents the ratio of $\\Pr(\\text{test}_+|\\text{untested}, S_0)$ to $\\Pr(\\text{test}_+|\\text{tested})$, we estimate $\\beta$ from the COVID-19 Trends and Impact Survey as the ratio of the screening test positivity over the overall test positivity. Here, we consider the 2.5\\% and 97.5\\% percentiles and mean for each state. Most have a mean near 0.2.", fig.width=9}
 
 ctis %>%
   group_by(state) %>%
@@ -389,81 +389,6 @@ for (x in list(c(1e-3, 2e-3), c(1/3, 2/3))) {
 ```
 
 
-```{r}
-#
-# Logistic transformation of the Beta CDF.
-#
-f.beta <- function(alpha, beta, x, lower=0, upper=1) {
-  p <- pbeta(x, alpha, beta)
- return(p)
-}
-#
-# Sums of squares.
-#
-delta <- function(fit, actual) sum((fit-actual)^2)
-#
-# The objective function handles the transformed parameters `theta` and
-# uses `f.beta` and `delta` to fit the values and measure their discrepancies.
-#
-objective <- function(shapes, x, prob, ...) {
-  fit <- pbeta(x, shapes[1], shapes[2], ...)
-  # return sum of squares
-  return(sum((fit, prob)^2))
-}
-
-# Solve two problems.
-
-par(mfrow=c(1,2))
-alpha <- 15; beta <- 22 # The true parameters
-for (x in list(c(1e-3, 2e-3), c(1/3, 2/3))) {
-  x.p <- f.beta(alpha, beta, x)        # The correct values of the p_i
-  start <- (c(1e1, 1e1))            # A good guess is useful here
-  sol <- nlm(objective, start, x=x, prob=x.p, lower=0, upper=1,
-             typsize=c(1,1), fscale=1e-12, gradtol=1e-12)
-  parms <- (sol$estimate)           # Estimates of alpha and beta
-  #
-  # Display the actual and estimated values.
-  #
-  print(rbind(Actual=c(alpha=alpha, beta=beta), Fit=parms))
-  #
-  # Plot the true and estimated CDFs.
-  #      
-  curve(pbeta(x, alpha, beta), 0, 1, n=1001, lwd=2)
-  curve(pbeta(x, parms[1], parms[2]), n=1001, add=TRUE, col="Red")
-  points(x, pbeta(x, alpha, beta))
-}
-
-
-
-for (x in list(c(.1200,.2188,.3683))) {
-  # x.p <- f.beta(alpha, beta, x)        # The correct values of the p_i
-  start <- (c(1e1, 1e1))            # A good guess is useful here
-  sol <- nlm(objective, start, x=x, prob=c(.025,.5,.975), lower=0, upper=1,
-             typsize=c(1,1), fscale=1e-12, gradtol=1e-13)
-  parms <- (sol$estimate)           # Estimates of alpha and beta
-  #
-  # Display the actual and estimated values.
-  #
-  # print(rbind(Actual=c(alpha=alpha, beta=beta), Fit=parms))
-  #
-  # Plot the true and estimated CDFs.
-  #      
-  # curve(pbeta(x, alpha, beta), 0, 1, n=1001, lwd=2)
-  # curve(pbeta(x, parms[1], parms[2]), n=1001, add=TRUE, col="Red")
-  # points(x, pbeta(x, alpha, beta))
-}
-parms
-
-
-rbeta(1e4, parms[1], parms[2]) %>% median()
-rbeta(1e4, parms[1], parms[2]) %>% quantile(.025)
-rbeta(1e4, parms[1], parms[2]) %>% quantile(.975)
-
-
-rbeta(1e3, parms[1], parms[2]) %>% mean()
-
-
-```
 
 
 
@@ -544,5 +469,78 @@ ctis %>%
   pull(mean) %>%
   mean()
   
+```
+
+
+
+## Compare Priors
+
+```{r}
+
+source(here("R/05-state-analysis.R"))
+
+
+beta_shape = get_shape(ctis_smoothed,
+                             option="beta",
+                       quiet=TRUE)
+
+
+
+
+tibble(x = seq(0, 1, length = 10^(4)),
+       original = with(prior_params, beta_density(x,
+                                     mean = beta_mean,
+                                     sd = beta_sd,
+                                     bounds = beta_bounds)),
+       ctis= dbeta(x, shape1=beta_shape[1], 
+                   shape2=beta_shape[2])) %>%
+  pivot_longer(c(original,ctis))%>%
+   ggplot(aes(x=x, y = value, fill=name)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0, ymax=value,fill=name),
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $\\beta$"),
+       fill ='')
+
+
+
+
+```
+
+```{r}
+
+
+s_untested_shape = get_shape(ctis_smoothed,
+                             option="s_untested",
+                       quiet=TRUE)
+
+
+
+
+tibble(x = seq(0, 1, length = 10^(4)),
+       original = with(prior_params, beta_density(x,
+                                     mean = s_untested_mean,
+                                     sd = s_untested_sd,
+                                     bounds = s_untested_bounds)),
+       ctis= dbeta(x, shape1=s_untested_shape[1], 
+                   shape2=s_untested_shape[2])) %>%
+  pivot_longer(c(original,ctis))%>%
+   ggplot(aes(x=x, y = value, fill=name)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0, ymax=value,fill=name),
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $Pr(S_1|untested)$"),
+       fill ='')
+
 ```
 
