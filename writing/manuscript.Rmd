@@ -6,8 +6,21 @@ output:
   bookdown::pdf_document2:
     toc: false
     number_sections: false
+header-includes:
+ \usepackage{float}
   
 ---
+
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = FALSE,  message=FALSE,
+                      warning=FALSE, fig.pos="H",
+                      out.extra = "")
+library(knitr)
+library(here)
+
+```
+
 
 \newpage 
 
@@ -19,9 +32,54 @@ output:
 
 # Results
 
-## County Level in Massachusetts
+## County Level Estimates in Massachusetts
 
-## State-level (1 version)
+### Comparison to Wastewater Data and Covidestim Estimates
+
+Because there is no established ground truth to compare to regarding the true number of infections for any time-interval, at the county level we compare our results to two distincts sources of information: wastewater data aggregated at the county-level, and results from a previously published Bayesian evidence synthesis model, Covidestim. This also allows us to compare how different implementations of probabilistic bias analysis compare to Covidestim estimates and wastewater concentrations.
+
+Our first comparison considers the correlations between wastewater concentrations and the probabilistic bias estimates as well as between the Covidestim estimates and the probabilistic bias estimates (Figure \@ref(fig:correlations)).
+
+```{r correlations, fig.cap ="Considering the correlations between probablistic bias estimates and wastewater concentrations (a) and between probablistic bias estimates and Covidestim estimates (b). We see that all implementations considered are highly correlated with both wastewater concentrations and Covidestim estimates. The implementation that does not allow priors to vary by state or date has the highest correlations."}
+
+include_graphics(
+  here('figures/correlations-wastewater-by-version.pdf')
+  )
+
+
+```
+
+
+NOTE add (a), (b) to this figure
+
+```{r}
+
+include_graphics(here('figures/simulation-intervals-county.pdf'))
+
+
+```
+
+
+
+## State-level Estimates
+
+For simplicity, at the state-level we focus on the implementation that does not vary by state or date. This also allows us to consider the entirety of 2021, since survey data is only available for dates after March 20, 2021. A full comparison of implementations is included in Supplementary Figure covidestim-concordance-state. 
+
+In Figure \@ref(fig:ratio-estimated-to-observed-by-wave), we consider three distinct two-week intervals during waves of the pandemic in 2021. Simulation intervals for all two-week intervals for all states are shown in Supplementary Figure sim-intervals-state.
+
+Although prevalence of COVID-19 was highest during the time interval during the Omicron wave, we see that the ratio of estimated infections to observed infections is higher during the time intervals in the alpha and delta waves. This distinction is explained by the differences in testing rates during these period: the testing rate during this two-week interval during the omicron wave was 2.4 times that of the alpha wave and 4.9 times that of the delta wave.
+
+Several states consistently have among the highest or lowest ratios of estimated to observed infections. In particular, there are 6 states with among the lowest 10 ratios of estimated infections to observed infections, and as such the highest case ascertainment, for more than 80% of time intervals considered. These states were Rhode Island, Massachusetts, District of Columbia, Alaska, New York, and Vermont. Meanwhile, states that had the highest ratios, and equivalently the lowest case ascertainment, include Mississippi, South Dakota, Oklahoma, Nebraska, and Tennessee.
+
+
+
+
+```{r ratio-estimated-to-observed-by-wave, fig.cap="The ratio of estimated infections to observed infections for three time intervals of interest: one during the alpha wave, one during the delta wave, and one during the omicron wave. Although the prevalence of COVID-19 was highest during the omicron wave, the ratios of estimated to observed infections are higher for the time intervals during the alpha and delta waves, a difference that was driven by lower testing rates during these times. The trend we see in these three time intervals where Mississippi, South Dakota, Oklahoma, Nebraska, and Tennessee have among the highest ratios of estimated infections to observed infections, and as such the lowest case ascertainment rates, is consistent across the full set of time intervals considered from January of 2021 to March of 2022."}
+
+include_graphics(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
+
+```
+
 
 
 # Methods 
@@ -29,8 +87,17 @@ output:
 ## Data
 
 ### Massachusetts County Level
+
 ### State Level
+
 ### Survey Data 
+
+The COVID-19 Trends and Impact Survey was run in collaboration by ...
+
+
+### Wastewater Data 
+
+Biobot analytics ...
 
 ## Statistical Methods
 
