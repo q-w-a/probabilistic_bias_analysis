@@ -520,70 +520,23 @@ get_v6_corrected <- function(state_testing, params) {
 }
 
 objective <- function(shapes, x, prob, ...) {
+  # parameters are log(shape1),log(shape2)
+  shapes <- exp(shapes)
   fit <- pbeta(x, shapes[1], shapes[2])
+  # logistic transformation
+  fit <- log(fit/(1-fit))
   # return sum of squares
   return(sum((fit-prob)^2))
 }
 
 
-
-get_shape_smoothed <- function(ctis_smoothed, option, quiet=FALSE) {
-  
-  if (option=="beta") {
-    ctis_quantiles <- ctis_smoothed %>%
-      summarize(q1 = quantile(beta_estimate_spline_smoothed,.025, na.rm=TRUE),
-                median = median(beta_estimate_spline_smoothed, na.rm=TRUE),
-                q2 = quantile(beta_estimate_spline_smoothed,.975, na.rm=TRUE),
-                sd=sd(beta_estimate_spline_smoothed,na.rm=TRUE))
-    
-
-  }
-  if (option=="s_untested") {
-    ctis_quantiles <- ctis_smoothed %>%
-      summarize(q1 = quantile(s_untested_smoothed,.025, na.rm=TRUE),
-                median = median(s_untested_smoothed, na.rm=TRUE),
-                q2 = quantile(s_untested_smoothed,.975, na.rm=TRUE),
-                sd=sd(s_untested_smoothed, na.rm=TRUE))
-    
-  }
-  
-  start <- get_beta_params(ctis_quantiles$q1, ctis_quantiles$sd) %>%
-    unlist()
-  
-  optim_results <- nlm(objective, start, 
-             x=c(ctis_quantiles$q1, ctis_quantiles$median, ctis_quantiles$q2),
-             prob=c(.025,.5,.975), lower=0, upper=1,
-             typsize=c(1,1), fscale=1e-14, gradtol=1e-14)
-  
-  params <- (optim_results$estimate) 
-  
-  if(!quiet) {
-    message(paste0("Input quantiles (0.025, .5, .975):\n",
-                   round(ctis_quantiles$q1,4), ", ",
-                   round(ctis_quantiles$median,4), ", ",
-                   round(ctis_quantiles$q2,4)))
-    sim <- rbeta(1e4, params[1], params[2])
-    output_quantiles <- list(q1=quantile(sim,.025),
-                          median=median(sim),
-                          q2=quantile(sim, .975))
-    message(paste0("Output quantiles (0.025, .5, .975):\n",
-                   round(output_quantiles$q1,4), ", ",
-                   round(output_quantiles$median,4), ", ",
-                   round(output_quantiles$q2,4)))
-    
-    
-  }
-  
-  return(params)
-  
-  
+logit <- function(p) {
+  log(p/(1-p))
 }
 
-
-
-
-
-get_shape <- function(ctis_smoothed, option, quiet=FALSE) {
+get_shape <- function(ctis_smoothed, option, 
+                      probs=c(.025,.5,.975),
+                      quiet=FALSE) {
   
   dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
   
@@ -593,9 +546,9 @@ get_shape <- function(ctis_smoothed, option, quiet=FALSE) {
       group_by(biweek,state) %>%
       summarize(beta_est=mean(beta_est,na.rm=TRUE)) %>%
       ungroup() %>%
-      summarize(q1 = quantile(beta_est,.025, na.rm=TRUE),
-                median = median(beta_est, na.rm=TRUE),
-                q2 = quantile(beta_est,.975, na.rm=TRUE),
+      summarize(q1 = quantile(beta_est,probs[1], na.rm=TRUE),
+                q2 = quantile(beta_est,probs[2], na.rm=TRUE),
+                q3 = quantile(beta_est,probs[3], na.rm=TRUE),
                 sd=sd(beta_est,na.rm=TRUE))
     
   }
@@ -605,37 +558,47 @@ get_shape <- function(ctis_smoothed, option, quiet=FALSE) {
       group_by(biweek,state) %>%
       summarize(smoothed_wcli=mean(smoothed_wcli,na.rm=TRUE))  %>%
       ungroup() %>%
-      summarize(q1 = quantile(smoothed_wcli,.025, na.rm=TRUE),
-                median = median(smoothed_wcli, na.rm=TRUE),
-                q2 = quantile(smoothed_wcli,.975, na.rm=TRUE),
+      summarize(q1 = quantile(smoothed_wcli,probs[1], na.rm=TRUE),
+                q2 = quantile(smoothed_wcli,probs[2], na.rm=TRUE),
+                q3 = quantile(smoothed_wcli,probs[3], na.rm=TRUE),
                 sd=sd(smoothed_wcli, na.rm=TRUE))
     
   }
   
-  start <- get_beta_params(ctis_quantiles$median, ctis_quantiles$sd) %>%
+  start <- get_beta_params(ctis_quantiles$q2, ctis_quantiles$sd) %>%
     unlist()
   
-  optim_results <- nlm(objective, start, 
-                       x=c(ctis_quantiles$q1, ctis_quantiles$median, ctis_quantiles$q2),
-                       prob=c(.025,.5,.975), lower=0, upper=1,
+  
+
+  optim_results <- nlm(objective, log(start), 
+                       x=c(ctis_quantiles$q1, ctis_quantiles$q2, ctis_quantiles$q3),
+                       prob=logit(probs), lower=0, upper=1,
                        typsize=c(1,1), fscale=1e-14, gradtol=1e-14)
   
   params <- (optim_results$estimate) 
+  params <- exp(params)
   
   if(!quiet) {
-    message(paste0("Input quantiles (0.025, .5, .975):\n",
+    message(paste0("Input quantiles:\n",
                    round(ctis_quantiles$q1,4), ", ",
-                   round(ctis_quantiles$median,4), ", ",
-                   round(ctis_quantiles$q2,4)))
-    sim <- rbeta(1e4, params[1], params[2])
-    output_quantiles <- list(q1=quantile(sim,.025),
-                             median=median(sim),
-                             q2=quantile(sim, .975))
-    message(paste0("Output quantiles (0.025, .5, .975):\n",
-                   round(output_quantiles$q1,4), ", ",
-                   round(output_quantiles$median,4), ", ",
-                   round(output_quantiles$q2,4)))
-    
+                   round(ctis_quantiles$q2,4), ", ",
+                   round(ctis_quantiles$q3,4)))
+    # sim <- rbeta(1e4, params[1], params[2])
+    # output_quantiles <- list(q1=quantile(sim,probs[1]),
+    #                          q2=quantile(sim,probs[2]),
+    #                          q3=quantile(sim,probs[3]))
+    # message(paste0("Output quantiles:\n",
+    #                round(output_quantiles$q1,4), ", ",
+    #                round(output_quantiles$q2,4), ", ",
+    #                round(output_quantiles$q3,4)))
+    # 
+    output_quantiles <- qbeta(p = probs, params[1], params[2])
+
+    message(paste0("Output quantiles (theoretical):\n ",
+                   round(output_quantiles[1],4), ", ",
+                   round(output_quantiles[2],4), ", ",
+                   round(output_quantiles[3],4)))
+
     
   }
   
@@ -647,7 +610,8 @@ get_shape <- function(ctis_smoothed, option, quiet=FALSE) {
 
 #---------------- Version 7 --------------
 
-get_v7_state <- function(data, beta_shape, s_untested_shape, testing = FALSE) {
+get_v7_state <- function(data, beta_shape,
+                         s_untested_shape, testing = FALSE) {
   
   params <-  list(
     alpha_mean = .95,

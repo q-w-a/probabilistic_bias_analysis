@@ -135,6 +135,7 @@ list(
     command = get_v7_state(
       data = tests_biweekly_state,
       beta_shape = get_shape(ctis_smoothed,
+                             probs=c(.1,.5,.9),
                              option="beta"),
       s_untested_shape = get_shape(ctis_smoothed,
                                    option="s_untested")
@@ -214,6 +215,7 @@ list(
     command = get_county_v7(
       data = ma_biweekly_county,
       beta_shape = get_shape(ctis_smoothed,
+                             probs=c(.1,.5,.9),
                              option="beta"),
       s_untested_shape = get_shape(ctis_smoothed,
                                    option="s_untested")

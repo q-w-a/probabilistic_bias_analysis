@@ -26,7 +26,8 @@ get_mass_county|function|cc264479b6979a67|||||||||||||||
 get_melded|function|e7b81cc1b9ca8bf0|||||||||||||||
 get_michigan_county|function|479fcc8dc8689467|||||||||||||||
 get_priors|function|5a446a5d7ad7f054|||||||||||||||
-get_shape|function|0980d96514ff465b|||||||||||||||
+get_shape|function|9d78862e1202dd27|||||||||||||||
+get_shape_smoothed|function|0980d96514ff465b|||||||||||||||
 get_shape1|function|8678a2b32bb038d8|||||||||||||||
 get_shape2|function|6742d398675337c8|||||||||||||||
 get_smoothed_ctis|function|d844143a5e98e9e7|||||||||||||||
@@ -43,6 +44,7 @@ get_v5_county_corrected|function|d1e669374ebe28d3|||||||||||||||
 get_v6_corrected|function|bf691a4c9db0625f|||||||||||||||
 get_v6_county_corrected|function|d21e8c35bd0689b2|||||||||||||||
 get_v7_state|function|9de0cd131c4df081|||||||||||||||
+logit|function|93c8c5ac7b6f2cbc|||||||||||||||
 ma_biweekly_county|stem|97bd6eca105b75d4|0ebf6337025f21cb|f920532bcd0f8c9a|-1185512336||t19534.8154422316s|ecd5ff6530e51d8b|8135|rds|local|vector|||2.51||
 ma_v1|stem|7ce25c7eb1329b81|c2fd68901a8878e3|595793b4f4184bf6|-236316599||t19535.0268180542s|3d378cc088b93edc|15515|rds|local|vector|||359.156||
 ma_v2|stem|d96ad5a064fc61d4|e2aa1a7915223db1|bb56517399d81c71|1211745515||t19535.0429656263s|17bcf38dbbbfa859|13006|rds|local|vector|||1395.135||
@@ -50,9 +52,9 @@ ma_v3|stem|253a145c52df8f60|04a5f6a83c36bc0c|bb56517399d81c71|1458070088||t19535
 ma_v4|stem|7553ce10ba4064bf|b118aefdab5c5553|bb56517399d81c71|748293548||t19535.0721295391s|45eab5b0e8c46baa|13024|rds|local|vector|||1228.96||
 ma_v5|stem|002f10bf41a032d9|0517354024c150ff|bb56517399d81c71|-1322314028||t19535.086561449s|da42bf5be6a56b3b|13015|rds|local|vector|||1246.899||
 ma_v6|stem|1b4be56149e8fbd8|f40e562ece05ccb0|bb56517399d81c71|-1090407815||t19535.1016278857s|51a4fa2fb5fea9d3|13025|rds|local|vector|||1301.716||
-ma_v7|stem|04bf3a8828070620|19ff65772ff168d1|abf8b4f32adb6029|231919642||t19535.0226609128s|33ea4c217e417a81|15518|rds|local|vector|||359.975|NaNs produced. NAInf replaced by maximum positive value. NaNs produced. NAInf replaced by maximum positive value. NaNs produced. NAInf replaced by maximum positive value|
+ma_v7|stem|0b882eea3e843a30|81718b8caf9b21d7|ff20e289aba57772|231919642||t19538.8310635389s|34911648f8162e01|15510|rds|local|vector|||385.07|NAInf replaced by maximum positive value. NAInf replaced by maximum positive value|
 mi_biweekly_county|stem|82041c40409a4661|fe7918a56eafd4e4|a5d330c7fb5c9e77|-1031805087||t19534.8155722393s|64583734387ba5dc|40638|rds|local|vector|||1.788||
-objective|function|80870fcfe68f1699|||||||||||||||
+objective|function|abb12ae38a902a98|||||||||||||||
 plot_melded|function|a88134ea88b7acbd|||||||||||||||
 prior_params|stem|d3e26a39c7d7be5c|dc2d045f1ffab70a|115284592fa81747|-2037373248||t19534.8154427029s|efa41a4afcb89295|262|rds|local|vector|||0.001||
 process_priors_per_county|function|38a6f5dfa557f5b5|||||||||||||||
@@ -66,7 +68,7 @@ state_v3|stem|c61d95a21c8fdb94|8cff0268e056503f|9c50a86c45d93565|2112853936||t19
 state_v4|stem|204c99e06fd0cbb2|b4520f67ce4fe07a|9c50a86c45d93565|-1425313305||t19534.9407298936s|11bd81924d6b6598|27339|rds|local|vector|||2824.097||
 state_v5|stem|9ce8fc7e6d0f7118|e6648fec78e3c19a|9c50a86c45d93565|-1723052439||t19534.9751277228s|02c855875b7ef5cf|27351|rds|local|vector|||2967.093||
 state_v6|stem|6a9193bcaa0be546|befb733c5c0c396c|9c50a86c45d93565|-1500845846||t19535.0090277093s|19c0272cd69e23ff|27335|rds|local|vector|||2921.947||
-state_v7|stem|83384a8e114cf377|90713d789dd0dba4|423c1cdac5ad61c2|-1799305898||t19534.9462244123s|9841cc47da3be74e|60467|rds|local|vector|||1639.876|NaNs produced. NAInf replaced by maximum positive value. NaNs produced. NAInf replaced by maximum positive value. NaNs produced. NAInf replaced by maximum positive value|
+state_v7|stem|432ce738f91ce489|0e53bcdf94c017d9|62d80304137d21b3|-1799305898||t19538.8509396427s|74f1334da38594a2|60460|rds|local|vector|||1717.066|NAInf replaced by maximum positive value. NAInf replaced by maximum positive value|
 summarize_corrected_sample|function|a0cb7c8964ee68db|||||||||||||||
 tests_biweekly_state|stem|2919b32c78afad5d|2f241e580a396879|fdca40a0be45182e|1602525337||t19534.8155366024s|d6cc45981a73fb4f|40950|rds|local|vector|||8.071||
 waste|stem|6e3e29146007f932|959b19dc0fa72e13|17300d8e8c16af7e|-443262632||t19534.8160967944s|2081fc10a45bc22f|30519|rds|local|vector|||0.792||
