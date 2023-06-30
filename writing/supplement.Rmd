@@ -11,7 +11,7 @@ output:
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
 library(knitr)
 library(here)
 
@@ -30,12 +30,39 @@ include_graphics(here("figures/emp-estimate-beta-dist-by-state.pdf"))
 # Details on Each Implementation
 
 
+```{r covidestim-concordance-state, fig.cap="For each implementation, the proportions of simulation intervals where the Covidestim median was below, within, or above the interval are shown, across all states used for the implementation."}
+
+include_graphics(here('figures/concordance-covidestim-state.pdf'))
+
+```
+
+
+```{r, fig.cap="The proportions of simulation intervals where the Covidestim median was below, within, or above the intervals are shown, considering all counties except Dukes/Nantucket, where Covidestim estimates were not produced."}
+
+include_graphics(here('figures/concordance-covidestim-county.pdf'))
+
+```
+
+
+\newpage
+
+# Full Set of Simulation Intervals by State
+
+```{r sim-intervals-state}
+
+include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
+
+```
+
+
+
+
 ## COVID-19 Trends and Impact Survey 
+
 
 
 # County Results by Implementation
 
 
 
-# Sensitivity Analyses 
 
