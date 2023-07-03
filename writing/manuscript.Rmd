@@ -61,6 +61,22 @@ include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 ## County Level Estimates in Massachusetts
 
+
+```{r}
+
+include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf'))
+
+```
+
+
+
+```{r}
+
+include_graphics(here('figures/simulation-intervals-color-version-county.pdf'))
+
+```
+
+
 ### Comparison to Wastewater Data and Covidestim Estimates
 
 Because there is no established ground truth to compare to regarding the true number of infections for any time-interval, at the county level we compare our results to two distincts sources of information: wastewater data aggregated at the county-level, and results from a previously published Bayesian evidence synthesis model, Covidestim. This also allows us to compare how different implementations of probabilistic bias analysis compare to Covidestim estimates and wastewater concentrations.

@@ -28,8 +28,8 @@ library(scales)
 library(cowplot)
 
 
-filter_versions <- FALSE 
-save_figures <- FALSE
+filter_versions <- TRUE 
+save_figures <- TRUE
 
 
 include_other_norm <- FALSE
@@ -142,7 +142,6 @@ if(filter_versions) {
 }
 
 
-
 ```
 
 ```{r}
@@ -195,6 +194,33 @@ wjoined <- wjoined %>%
   left_join(versions)
 
 
+if(filter_versions) {
+  
+  county <- county %>%
+    left_join(versions) %>%
+    mutate(vlabel=case_when(
+      version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+      version == "v5" ~ "$\\beta$ Centered at Survey Value",
+      version =="v6" ~  "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+      TRUE ~ vlabel
+    )) %>%
+    mutate(vlabel =factor(vlabel,levels= c(
+        "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
+         "$P(S_1|untested)$ Centered at Survey Value",
+         "$\\beta$ Centered at Survey Value",
+        "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values"))) %>%
+    left_join(county_names) %>%
+    mutate(name = ifelse(fips =="25007,25019", "Nantucket and Dukes", name)) %>%
+    left_join(dates,  relationship = "many-to-many") %>%
+    group_by(biweek) %>%
+    mutate(mindate = min(date),
+           maxdate = max(date)) %>%
+    ungroup() 
+
+
+}
+
+
 ```
 
 
@@ -244,7 +270,7 @@ correlations <- w_data %>%
   group_by(version) %>%
   summarize(Correlation = cor(exp_cases_median_std,mean_conc_std),
             vlabel =unique(vlabel)) %>%
-  mutate(x=1.8,
+  mutate(x=2.8,
          y=.1)
 
 w_data %>%
@@ -265,9 +291,9 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
+       title = "Correlations Between Probabilistic Bias Infections\nand Mean Wastewater Concentration")
 
 ```
 
@@ -289,9 +315,9 @@ plt_wastewater_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
-       title = "")
+       title = "Correlations with Wastewater Concentrations")
 
   
   
@@ -332,9 +358,9 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Covidestim Estimates\n(Standardized by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+       title = "Correlations Between Probabilistic Bias Infections\nand Covidestim Estimates")
 
 
 plt_covidestim_pb <- w_data %>%
@@ -353,9 +379,9 @@ plt_covidestim_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Covidestim Estimates\n(Standardized by County)",
-       title = "")
+       title = "Correlations with Covidestim Infections")
 
 
 ```
@@ -464,7 +490,7 @@ pal <- c("#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
 names(pal) <- c(#"$observed$", 
                 '$P(S_1|untested)$ Centered at Survey Value',
                 '$P(S_1|untested)$ and $\\beta$ Centered at Survey Values',
-               "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$",
+               "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
                "$\\beta$ Centered at Survey Value"
                )
 
@@ -705,9 +731,9 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
+       title = "Correlations Between Probabilistic Bias Infections\nand Mean Wastewater Concentration")
 
 
 plt_wastewater_pb <- w_data %>%
@@ -727,7 +753,7 @@ plt_wastewater_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County by County)",
        title = "")
 
@@ -770,9 +796,9 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County by County)",
        y = "Covidestim Estimates\n(Standardized by County by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+       title = "Correlations Between Probabilistic Bias Infections\nand Covidestim Estimates")
 
 
 plt_covidestim_pb <- w_data %>%
@@ -791,7 +817,7 @@ plt_covidestim_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County by County)",
        y = "Covidestim Estimates\n(Standardized by County by County)",
        title = "")
 
@@ -818,7 +844,7 @@ cor_waste <- correlations %>%
 cor_waste %>%
   left_join(cor_covid) %>%
   mutate(vlabel = gsub(
-    "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$", 
+    "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
     "Priors Do Not Vary by County and Date",
     vlabel, fixed=TRUE),vlabel=gsub(" at","\nat", vlabel)) %>%
   arrange(desc( `Correlation with Wastewater Concentrations`)) %>%
@@ -856,7 +882,7 @@ w_data %>%
   theme_c() +
   labs(x = "Covidestim Estimates\n(Standardized by County by County)",
        y = "Wastewater Concentrations\n(Standardized by County by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+       title = "Correlations Between Probabilistic Bias Infections\nand Covidestim Estimates")
 
 
 
@@ -887,7 +913,7 @@ pal <- c("#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
 names(pal) <- c(#"$observed$", 
                 '$P(S_1|untested)$ Centered at Survey Value',
                 '$P(S_1|untested)$ and $\\beta$ Centered at Survey Values',
-               "$Priors\\,Do\\,Not\\,Vary\\,by\\,County\\,and\\,Date$",
+               "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
                "$\\beta$ Centered at Survey Value"
                )
 
@@ -967,7 +993,7 @@ w_data%>%
 
 ## Normalization Strategy 3: By Maximum (Separately)
 
-For each county, normalize the wastewater concentration by the maximum concentration for that county and the probabilistic bias counts by the maximum *median* estimated counts for that county (2.5th percentile and 97.5th percentile also standardized by the maximum *median* estimated counts for that county).
+For each county, normalize the wastewater concentration by the maximum concentration for that county and the Probabilistic Bias Infections by the maximum *median* estimated counts for that county (2.5th percentile and 97.5th percentile also standardized by the maximum *median* estimated counts for that county).
 
 ### PB Counts and Wastewater
 
@@ -999,9 +1025,9 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Mean Wastewater Concentration")
+       title = "Correlations Between Probabilistic Bias Infections\nand Mean Wastewater Concentration")
 
 
 
@@ -1022,7 +1048,7 @@ plt_wastewater_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "")
 
@@ -1065,9 +1091,9 @@ w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Covidestim Estimates\n(Standardized by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+       title = "Correlations Between Probabilistic Bias Infections\nand Covidestim Estimates")
 
 
 plt_covidestim_pb <- w_data %>%
@@ -1086,7 +1112,7 @@ plt_covidestim_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
-  labs(x = "Probabilistic Bias Counts\n(Standardized by County)",
+  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Covidestim Estimates\n(Standardized by County)",
        title = "")
 ```
@@ -1127,7 +1153,7 @@ w_data %>%
   theme_c() +
   labs(x = "Covidestim Estimates\n(Standardized by County)",
        y = "Wastewater Concentrations\n(Standardized by County)",
-       title = "Correlations Between Probabilistic Bias Counts\nand Covidestim Estimates")
+       title = "Correlations Between Probabilistic Bias Infections\nand Covidestim Estimates")
 
 
 
@@ -1155,21 +1181,9 @@ pb_correlations <- w_data %>%
 ```{r, fig.width=13, fig.height=8}
 
 
-county_dat <- county %>%
-  # set Nantucket, Duke fips to Nantucket since we have wastewater data
-  # for Nantucket
-  left_join(dates,  relationship = "many-to-many") %>%
-  group_by(biweek) %>%
-  mutate(mindate = min(date),
-         maxdate = max(date)) %>%
-  ungroup() %>%
-  left_join(county_names, by=c('fips'='fips')) %>%
-  left_join(versions) %>%
-  mutate(name = ifelse(fips =="25007,25019", "Nantucket and Dukes", name))
 
 
-
-county_dat %>%
+county %>%
   filter(version=="v7")  %>%
    ggplot() +
   geom_ribbon(aes(x = date, 
@@ -1216,7 +1230,7 @@ ggsave(here('figures/simulation-intervals-county.pdf'))
 
 
 
-county_dat %>%
+county %>%
   filter(fips %in% sample(unique(.data$fips),2))  %>% 
    ggplot() +
   geom_ribbon(aes(x = date, 
@@ -1260,7 +1274,7 @@ county_dat %>%
 ```{r, fig.width=12, fig.height=9}
 
 
-county_dat %>%
+county %>%
   filter(version=="v7")  %>%
   #filter(grepl("Nan",name)) %>%
    ggplot() +
@@ -1310,7 +1324,7 @@ Informs our understanding of the trends in the ratio of estimated to observed in
 ############################################
 # POSITIVE TESTS AND TEST POSITIVITY
 ############################################
-pltlist <- county_dat %>%filter(version=="v7") %>%
+pltlist <- county %>%filter(version=="v7") %>%
     mutate(testpos = positive/total) %>%
   group_by(across(-date)) %>%
   summarize(date=min(date) + days(7)) %>%
@@ -1379,7 +1393,7 @@ plot_grid(title_gg, legend, plt, rel_heights=c(.03, .03,.94), ncol=1)
 #####################################
 # TOTAL TESTS AND POSITIVE TESTS
 #####################################
-pltlist <- county_dat %>%filter(version=="v7") %>%
+pltlist <- county %>%filter(version=="v7") %>%
     mutate(testpos = positive/total) %>%
   group_by(across(-date)) %>%
   summarize(date=min(date) + days(7)) %>%
@@ -1448,7 +1462,7 @@ cowplot::plot_grid(title_gg, legend, plt, rel_heights =c(.03, .03,.94),ncol=1)
 # PERCENT CHANGE: TOTAL TESTS AND POSITIVE TESTS
 ###################################################
 
-county_dat %>%
+county %>%
   filter(version=="v7") %>%
   filter(!grepl("Nantucket",name)) %>%
     mutate(testpos = positive/total) %>%
@@ -1682,10 +1696,89 @@ ma_concordance %>%
 
 ```
 
-# Summary of Comparison Between Implementations 
+# Faceted by Version
 
-Although the spline-smoothing improved the correlations with wastewater concentrations and the correlations with Covidestim estimates, it did not improve the proportion containing the Covidestim median. 
+```{r, fig.width=15, fig.height=16}
 
-The implementation centering $\Pr(S_1|\text{untested})$ at the survey value along with the implementation that does not vary the priors by state or date are the most correlated with Covidestim estimates, wastewater concentrations, and  have the highest proportion of county-biweeks containing the Covidestim median.
+county %>% 
+  mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub),
+             alpha = .8,
+             show.legend=FALSE,
+             fill="#596281") +
+  facet_grid(name~vlabel, 
+             labeller=labeller(vlabel =as_labeller(
+               TeX, default=label_parsed)),
+             scales="free") +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          ) +
+  scale_fill_manual(values = pal)  +
+  labs(x="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "Counties in Massachusetts") +
+  guides(color = guide_legend(override.aes = list(linewidth =2)))
 
 
+
+```
+
+```{r,fig.width=15, fig.height=16, eval=save_figures}
+
+ggsave(here('figures/simulation-intervals-faceted-version-county.pdf'))
+
+
+```
+
+
+```{r, fig.height=8, fig.width=14}
+
+county$vlabel %>% unique()
+
+pal
+
+county %>% 
+    mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
+  filter(biweek>=6) %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub,
+             fill=vlabel),
+             alpha = .5) +
+  facet_wrap(~name,
+             scales="free_y") +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          legend.text=element_text(hjust=0)
+          ) +
+  scale_fill_manual(values = pal,
+                    labels=TeX(unique(as.character(county$vlabel))))  +
+  labs(x="",
+       fill="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "Counties in Massachusetts") +
+  guides(fill=guide_legend(nrow=2))
+
+
+
+```
+
+
+```{r,fig.height=8, fig.width=14, eval=save_figures}
+
+ggsave(here('figures/simulation-intervals-color-version-county.pdf'))
+
+
+```

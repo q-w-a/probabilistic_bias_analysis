@@ -536,7 +536,9 @@ tibble(x = seq(0, 1, length = 10^(4)),
               alpha=.6) +
   theme_c(legend.text=element_text(size = 10)) +
   viridis::scale_fill_viridis(discrete=TRUE,
-                             option = "rocket", begin=.3,end=.8) +
+                             option = "rocket", 
+                             begin=.3,
+                             end=.8) +
   labs(x = "Value",
        y = "Probability Density", 
        title = latex2exp::TeX("Definition of Prior for $Pr(S_1|untested)$"),

@@ -40,20 +40,20 @@ versions <- tibble(
   version = c("v1", "v2", "v3", "v4", "v5", "v6", "v7"),
   vlabel = factor(
     c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
-    "$\\beta$ Centered at Emp. Value",
-    "$P(S_1|untested)$ Centered at Emp. Value",
-    "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
-        "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
+    "$\\beta$ Centered at Survey Value",
+    "$P(S_1|untested)$ Centered at Survey Value",
+    "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+        "$\\beta$ Centered at Survey Value (Spline Smoothed)",
+         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
         "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ),
     levels = c(
         "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
-        "$\\beta$ Centered at Emp. Value",
-         "$P(S_1|untested)$ Centered at Emp. Value",
-        "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values",
-        "$\\beta$ Centered at Emp. Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Emp. Values ($\\beta$ Spline Smoothed)",
+        "$\\beta$ Centered at Survey Value",
+         "$P(S_1|untested)$ Centered at Survey Value",
+        "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+        "$\\beta$ Centered at Survey Value (Spline Smoothed)",
+         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
         "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ) )
 )
