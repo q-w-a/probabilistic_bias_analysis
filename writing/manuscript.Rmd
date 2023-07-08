@@ -62,7 +62,7 @@ include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
 ## County Level Estimates in Massachusetts
 
 
-```{r}
+```{r, fig.width=15, fig.height=16}
 
 include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf'))
 
@@ -70,7 +70,7 @@ include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf')
 
 
 
-```{r}
+```{r,fig.width=12}
 
 include_graphics(here('figures/simulation-intervals-color-version-county.pdf'))
 
