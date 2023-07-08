@@ -68,8 +68,8 @@ theme_c <- function(...){
       # t, r, b, l
       plot.margin = unit(c(1,.5,.5,.5), "cm"),
       legend.position = "right",
-      strip.text.x = element_text(size = 11, face = "bold", color="white"),
-      strip.text.y = element_text(size = 11, face = "bold", color="white",angle=270),
+      strip.text.x = element_text(size = 11, color="white"),
+      strip.text.y = element_text(size = 11,  color="white",angle=270),
       strip.background = element_rect(fill = "#3E3D3D")
       ) %+replace%
       theme(...)
@@ -199,16 +199,16 @@ if(filter_versions) {
   county <- county %>%
     left_join(versions) %>%
     mutate(vlabel=case_when(
-      version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+      version == "v7" ~  "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$",
       version == "v5" ~ "$\\beta$ Centered at Survey Value",
-      version =="v6" ~  "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
-      TRUE ~ vlabel
+      version =="v6" ~  "$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}",
+      version == "v3" ~ "$P(S_1|untested)$ Centered at Survey Value",
     )) %>%
     mutate(vlabel =factor(vlabel,levels= c(
-        "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
+        "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$", 
          "$P(S_1|untested)$ Centered at Survey Value",
          "$\\beta$ Centered at Survey Value",
-        "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values"))) %>%
+        "$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}"))) %>%
     left_join(county_names) %>%
     mutate(name = ifelse(fips =="25007,25019", "Nantucket and Dukes", name)) %>%
     left_join(dates,  relationship = "many-to-many") %>%
@@ -216,12 +216,23 @@ if(filter_versions) {
     mutate(mindate = min(date),
            maxdate = max(date)) %>%
     ungroup() 
+  
+  county$vlabel %>% unique()
+  
+  wjoined <- wjoined %>%
+    mutate(vlabel=case_when(
+      version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+      version == "v5" ~ "$\\beta$ Centered at Survey Value",
+      version =="v6" ~  "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+      version == "v3" ~ "$P(S_1|untested)$ Centered at Survey Value"
+    ))
 
 
 }
 
 
 ```
+
 
 
 # Correlations 
@@ -270,7 +281,7 @@ correlations <- w_data %>%
   group_by(version) %>%
   summarize(Correlation = cor(exp_cases_median_std,mean_conc_std),
             vlabel =unique(vlabel)) %>%
-  mutate(x=2.8,
+  mutate(x=3.5,
          y=.1)
 
 w_data %>%
@@ -315,6 +326,7 @@ plt_wastewater_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
+  theme(strip.text.x = element_text(size=12)) +
   labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "Correlations with Wastewater Concentrations")
@@ -337,30 +349,9 @@ covidestim_correlations <- w_data %>%
   # missing values are handled by casewise deletion
   summarize(Correlation = cor(exp_cases_median_std,infections_std,
                               use = "complete.obs")) %>%
-  mutate(x=2.8,
+  mutate(x=3.5,
          y=.1)
 
-
-
-w_data %>%
-  ggplot(aes(x=exp_cases_median_std, y = infections_std)) +
-  geom_point(alpha=.5) +
-  geom_linerange(aes(xmin = exp_cases_lb_std,
-                     xmax=exp_cases_ub_std, 
-                     y = infections_std),
-                 alpha = .3) +
-  geom_text(
-           aes(x=x,y=y,  label=paste0("Correlation: ", 
-                                      round(Correlation,3))), 
-                data= covidestim_correlations ) +
-  facet_wrap(~vlabel,
-              ncol=2,
-             labeller= as_labeller(TeX, 
-                                   default = label_parsed)) +
-  theme_c() +
-  labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
-       y = "Covidestim Estimates\n(Standardized by County)",
-       title = "Correlations Between Probabilistic Bias Infections\nand Covidestim Estimates")
 
 
 plt_covidestim_pb <- w_data %>%
@@ -379,9 +370,12 @@ plt_covidestim_pb <- w_data %>%
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
   theme_c() +
+  theme(strip.text.x = element_text(size=12)) +
   labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Covidestim Estimates\n(Standardized by County)",
        title = "Correlations with Covidestim Infections")
+
+plt_covidestim_pb
 
 
 ```
@@ -398,7 +392,7 @@ cowplot::plot_grid(plt_wastewater_pb, plt_covidestim_pb, ncol=2,  labels="auto",
 ```
 
 
-```{r,eval=save_figures}
+```{r, fig.height=10, fig.width=14, eval=save_figures}
 
 
 ggsave(here("figures/correlations-wastewater-by-version.pdf"))
@@ -421,7 +415,7 @@ cor_waste <- correlations %>%
 cor_waste %>%
   left_join(cor_covid) %>%
   mutate(vlabel = gsub(
-    "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
+     "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$", 
     "Priors Do Not Vary by State and Date",
     vlabel, fixed=TRUE),vlabel=gsub(" at","\nat", vlabel)) %>%
   arrange(desc( `Correlation with Wastewater Concentrations`)) %>%
@@ -489,7 +483,7 @@ pal <- c("#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
 
 names(pal) <- c(#"$observed$", 
                 '$P(S_1|untested)$ Centered at Survey Value',
-                '$P(S_1|untested)$ and $\\beta$ Centered at Survey Values',
+                "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
                "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
                "$\\beta$ Centered at Survey Value"
                )
@@ -1701,6 +1695,7 @@ ma_concordance %>%
 ```{r, fig.width=15, fig.height=16}
 
 county %>% 
+  mutate(name=gsub("Nantucket and Dukes", "Nantucket\nand Dukes", name)) %>%
   mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
    ggplot() +
   geom_ribbon(aes(x = date, 
@@ -1719,6 +1714,7 @@ county %>%
   theme_c(
           legend.position = "top",
           ) +
+  theme_c(strip.text.x=element_text(size=13,color='white')) +
   scale_fill_manual(values = pal)  +
   labs(x="",
        y = "Estimated Infections",
@@ -1737,16 +1733,32 @@ ggsave(here('figures/simulation-intervals-faceted-version-county.pdf'))
 
 ```
 
+## Fill by Version
 
 ```{r, fig.height=8, fig.width=14}
 
-county$vlabel %>% unique()
 
 pal
 
-county %>% 
+county_relab <- county %>%
+  mutate(vlabel=case_when(
+      version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+      version == "v5" ~ "$\\beta$ Centered at Survey Value",
+      version =="v6" ~  "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+      version == "v3" ~ "$P(S_1|untested)$ Centered at Survey Value",
+    )) %>%
+    mutate(vlabel =factor(vlabel,levels= c(
+        "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
+         "$P(S_1|untested)$ Centered at Survey Value",
+         "$\\beta$ Centered at Survey Value",
+       "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values"))) %>%
     mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
-  filter(biweek>=6) %>%
+  filter(biweek>=6) 
+
+county_relab$vlabel %>% unique()
+
+
+county_relab %>%
    ggplot() +
   geom_ribbon(aes(x = date, 
              ymin = exp_cases_lb,
@@ -1763,7 +1775,7 @@ county %>%
           legend.text=element_text(hjust=0)
           ) +
   scale_fill_manual(values = pal,
-                    labels=TeX(unique(as.character(county$vlabel))))  +
+                    labels=TeX(unique(as.character(county_relab$vlabel))))  +
   labs(x="",
        fill="",
        y = "Estimated Infections",
@@ -1782,3 +1794,65 @@ ggsave(here('figures/simulation-intervals-color-version-county.pdf'))
 
 
 ```
+
+
+# Heatmap 
+
+
+```{r}
+
+######################################################
+# HEATMAP OF RATIO OF ESTIMATED TO OBSERVED
+######################################################
+
+heatmap_dat <- county %>%
+  filter(version == "v7") %>%
+  group_by(biweek, name, exp_cases_median, positive) %>%
+  summarize(date = min(date)) %>%
+  ungroup() 
+  
+wide <- heatmap_dat %>%
+    mutate(ratio= exp_cases_median/positive) %>%
+  select(-c(exp_cases_median, positive)) %>%
+  pivot_wider(names_from=name,values_from =ratio)
+
+heatmap_dat %>%
+  # mutate(county_name = gsub("Nantucket", "Nantucket and", name)) %>%
+  mutate(ratio=exp_cases_median/positive) %>%
+  mutate(date_lab = format(as.POSIXct(date),format="%b %d %Y")) %>%
+  group_by(name) %>%
+  mutate(m = median(ratio)) %>%
+  ungroup() %>%
+  ggplot(aes(x=fct_reorder(date_lab, date),
+             y = fct_reorder(name,m),
+             fill =exp_cases_median/positive)) +
+  geom_tile() +
+ # scale_x_discrete(breaks=breaks_date, labels = breaks_date)  +
+  viridis::scale_fill_viridis(option="rocket", direction=-1) +
+  labs(x="",
+       y= "",
+       fill = "Ratio of Estimated Infections\nto Observed Infections",
+       title = "Ratio of Median Estimated Infections to Observed Infections\nfor Counties in Massachusetts") +
+  theme_c() +
+  theme(axis.text.x = element_text(size=11, angle=90),
+        axis.text.y = element_text(size = 17),
+        axis.title = element_text(size=16),
+        legend.title = element_text(face="bold", size=18),
+        plot.title =element_text(size=22),
+        plot.subtitle = element_text(size=20))
+
+# which biweeks are highest?
+heatmap_dat %>%
+  mutate(ratio=exp_cases_median/positive) %>%
+  group_by(biweek) %>%
+  summarize(m=median(ratio),
+            date=min(date)) %>%
+  arrange(desc(m))
+
+ggsave(here('figures/ma_county_heatmap.pdf'),
+       height=10,
+       width =13,
+       dpi=400)
+
+```
+
