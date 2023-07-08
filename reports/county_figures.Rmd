@@ -1809,20 +1809,18 @@ heatmap_dat <- county %>%
   filter(version == "v7") %>%
   group_by(biweek, name, exp_cases_median, positive) %>%
   summarize(date = min(date)) %>%
-  ungroup() 
-  
-wide <- heatmap_dat %>%
-    mutate(ratio= exp_cases_median/positive) %>%
-  select(-c(exp_cases_median, positive)) %>%
-  pivot_wider(names_from=name,values_from =ratio)
-
-heatmap_dat %>%
-  # mutate(county_name = gsub("Nantucket", "Nantucket and", name)) %>%
+  ungroup() %>%
   mutate(ratio=exp_cases_median/positive) %>%
   mutate(date_lab = format(as.POSIXct(date),format="%b %d %Y")) %>%
   group_by(name) %>%
   mutate(m = median(ratio)) %>%
-  ungroup() %>%
+  ungroup() 
+
+date_labels_all <-  unique(heatmap_dat$date_lab)
+date_labels <- date_labels_all[seq(2, length(date_labels),by=2)]
+  
+
+heatmap_dat %>%
   ggplot(aes(x=fct_reorder(date_lab, date),
              y = fct_reorder(name,m),
              fill =exp_cases_median/positive)) +
@@ -1834,12 +1832,13 @@ heatmap_dat %>%
        fill = "Ratio of Estimated Infections\nto Observed Infections",
        title = "Ratio of Median Estimated Infections to Observed Infections\nfor Counties in Massachusetts") +
   theme_c() +
-  theme(axis.text.x = element_text(size=11, angle=90),
+  theme(axis.text.x = element_text(size=14, angle=90),
         axis.text.y = element_text(size = 17),
         axis.title = element_text(size=16),
         legend.title = element_text(face="bold", size=18),
         plot.title =element_text(size=22),
-        plot.subtitle = element_text(size=20))
+        plot.subtitle = element_text(size=20)) +
+  scale_x_discrete(breaks = date_labels_all, labels=date_labels)
 
 # which biweeks are highest?
 heatmap_dat %>%
@@ -1855,4 +1854,69 @@ ggsave(here('figures/ma_county_heatmap.pdf'),
        dpi=400)
 
 ```
+
+# Testing Rate versus Ratio of Estimated to Observed
+
+
+
+```{r testrate-v-ratio, fig.cap  = 'The ratio of the median estimated infections to observed infections plotted against the testing rate, where the testing rate is calculated as the total number tested in a two-week interval over the population size. When the priors are the same for all time intervals and states, there is minimal variability relationship between the testing rate and the ratio of estimated to observed infections, since the correction for incomplete testing and diagnostic test inaccuracy is identical for each time-interval and location. However, when we allow $\\beta$ or $\\Pr(S_1|\\text{untested})$ to vary by state and time interval, there is much variability in the relationship. A horizontal line in red at 1 is included to reference; a ratio of exactly one would indicate no infections went unobserved.'}
+
+lb <- county %>% mutate(testrate = total/population ) %>% pull(testrate) %>% min()
+
+###########################################################################
+# plot relationship between ratio of estimated cases to observed 
+# against testing rate 
+###########################################################################
+county %>%
+  ggplot(aes(x=total/population, y = exp_cases_median/positive)) +
+  geom_point(alpha=.03, size=.9) +
+  facet_wrap(~vlabel,
+               labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+  theme_c(axis.text.x = element_text(size =9),
+          axis.title = element_text(size=16) ) +
+  theme(strip.text.x = element_text(size=11, color="white")) +
+  scale_y_continuous(n.breaks=10) +
+  geom_hline(yintercept=1, linetype=2,color="darkred", alpha=.8, linewidth=.5) +
+  labs(y = "Ratio of Estimated Infections to Observed Infections",
+       x = "Testing Rate",
+       subtitle = "All Time Intervals for Counties in Massachusetts",
+       title = "Relationship Between Testing Rate and\nRatio of Estimated Infections to Observed Infections")+
+  scale_x_continuous(limits=c(lb,.3), n.breaks=4)
+
+
+ggsave(here('figures/testing_rate_ratio-county.pdf'), width=11,height=7, dpi=400)
+
+```
+
+
+```{r}
+
+
+
+###########################################################################
+# plot relationship between ratio of estimated cases to observed 
+# against testing rate 
+###########################################################################
+county %>%
+  ggplot(aes(x=total/population, y = exp_cases_median/positive, color=population)) +
+  geom_point(alpha=.03, size=.9) +
+  geom_linerange(aes(ymin = exp_cases_lb/positive,
+                     ymax=exp_cases_ub/positive ),
+                 alpha=.03) +
+  facet_wrap(~vlabel,
+               labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+  theme_c(axis.text.x = element_text(size =9),
+          axis.title = element_text(size=16) ) +
+  theme(strip.text.x = element_text(size=11, color="white")) +
+  scale_y_continuous(n.breaks=10) +
+  geom_hline(yintercept=1, linetype=2,color="darkred", alpha=.8, linewidth=.5) +
+  labs(y = "Ratio of Estimated Infections to Observed Infections",
+       x = "Testing Rate",
+       subtitle = "All Time Intervals and All States",
+       title = "Relationship Between Testing Rate and\nRatio of Estimated Infections to Observed Infections")+
+  scale_x_continuous( n.breaks=4, limits=c(lb,.3))
+
+
+```
+
 
