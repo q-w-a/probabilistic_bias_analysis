@@ -135,10 +135,11 @@ covidestim <- tar_read(covidestim_biweekly_county,
 
 dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
 
+FILT_VERSIONS <- c("v3", "v5", "v6", "v7")
 
 if(filter_versions) {
   county <- county %>%
-    filter(version %in% c("v3", "v5", "v6", "v7")) 
+    filter(version %in% FILT_VERSIONS) 
 }
 
 
@@ -1817,7 +1818,11 @@ heatmap_dat <- county %>%
   ungroup() 
 
 date_labels_all <-  unique(heatmap_dat$date_lab)
-date_labels <- date_labels_all[seq(2, length(date_labels),by=2)]
+date_labels <- date_labels_all
+date_labels[seq(1, length(date_labels_all),by=2)] <- ""
+
+
+#date_labels <- date_labels_all[seq(1, length(date_labels_all),by=2)]
   
 
 heatmap_dat %>%
@@ -1832,7 +1837,7 @@ heatmap_dat %>%
        fill = "Ratio of Estimated Infections\nto Observed Infections",
        title = "Ratio of Median Estimated Infections to Observed Infections\nfor Counties in Massachusetts") +
   theme_c() +
-  theme(axis.text.x = element_text(size=14, angle=90),
+  theme(axis.text.x = element_text(size=13, angle=90),
         axis.text.y = element_text(size = 17),
         axis.title = element_text(size=16),
         legend.title = element_text(face="bold", size=18),
@@ -1881,7 +1886,7 @@ county %>%
        x = "Testing Rate",
        subtitle = "All Time Intervals for Counties in Massachusetts",
        title = "Relationship Between Testing Rate and\nRatio of Estimated Infections to Observed Infections")+
-  scale_x_continuous(limits=c(lb,.3), n.breaks=4)
+  scale_x_continuous(limits=c(lb,.3), n.breaks=6)
 
 
 ggsave(here('figures/testing_rate_ratio-county.pdf'), width=11,height=7, dpi=400)
@@ -1919,4 +1924,163 @@ county %>%
 
 ```
 
+
+# Table Showing Covidestim Coverage
+
+
+```{r}
+
+
+versions <- tibble(
+  version = c( "v3", "v5", "v6", "v7"),
+  vlabel = factor(
+    c(  "$P(S_1|$untested) Centered at Survey Value"  ,
+    "$\\beta$ Centered at Survey Value",
+    "$P(S_1|$untested) and $\\beta$ Centered at Survey Values",
+     "Priors Do Not Vary by State or Date"
+    ),
+    levels =   c(  "$P(S_1|$untested) Centered at Survey Value"  ,
+    "$\\beta$ Centered at Survey Value",
+    "$P(S_1|$untested) and $\\beta$ Centered at Survey Values",
+     "Priors Do Not Vary by State or Date"
+    ))
+)
+```
+
+
+```{r load-state}
+
+state <- tar_read(state_v1, 
+                   store =targets_dir) %>% 
+  bind_rows(
+    tar_read(state_v2,
+             store =targets_dir)
+  ) %>%
+   bind_rows(
+    tar_read(state_v3, 
+             store =targets_dir)
+  ) %>%
+   bind_rows(
+    tar_read(state_v4, 
+             store =targets_dir)
+   )%>%
+   bind_rows(
+    tar_read(state_v5,
+             store =targets_dir)
+  )%>%
+   bind_rows(
+    tar_read(state_v6,
+             store =targets_dir)
+  ) %>%
+   bind_rows(
+    tar_read(state_v7,
+             store =targets_dir)
+  )
+
+covidestim_state <- tar_read(covidestim_biweekly_state,
+                        store =targets_dir)
+
+state_covidestim <- state %>%
+  inner_join(covidestim_state, relationship="many-to-many",
+             by = c('fips'='state', 'biweek'='biweek')) %>%
+  distinct() %>%
+  filter(version %in% FILT_VERSIONS) 
+
+```
+
+
+```{r}
+
+county_covidestim <- county %>%
+  inner_join(covidestim, relationship = "many-to-many") %>%
+  select(-date) %>%
+  distinct() 
+
+
+
+get_coverage <- function(df, geo_scale) {
+  df %>%
+    mutate(in_interval = case_when(
+    exp_cases_lb <= infections & 
+      infections <= exp_cases_ub ~ "Contained in Interval",
+    exp_cases_lb  > infections  ~ "Below Interval",
+    exp_cases_ub < infections ~ "Above Interval"
+  ) ) %>%
+  group_by(version, in_interval) %>%
+  summarize(n=n()) %>%
+  group_by(version) %>%
+  mutate(total = sum(n)) %>%
+  ungroup() %>%
+  mutate(prop = n/total) %>%
+  select(version, prop, in_interval) %>%
+  pivot_wider(names_from = in_interval, values_from=prop, names_prefix="Percent ") %>%
+  mutate(across(contains("Percent"), ~.x*100 )) %>%
+ # mutate(across(contains("Percent"), ~paste0(round(.x,3),"%")))
+  left_join(versions) %>%
+    mutate(`Geographic Scale` = geo_scale) %>%
+  select( `Geographic Scale`,
+         Implementation = vlabel, 
+          `Percent Below Interval`,
+         `Percent Contained in Interval`,
+           `Percent Above Interval`)
+}
+
+
+county_coverage <- county_covidestim %>% get_coverage(geo_scale="County")
+saveRDS(county_coverage, here("figures/table_data/county_coverage.RDS"))
+
+state_coverage <- state_covidestim %>% get_coverage(geo_scale="State")
+saveRDS(state_coverage, here("figures/table_data/state_coverage.RDS"))
+
+```
+
+\@ref(table:coverage) is 
+
+```{r}
+
+county_coverage %>%
+  bind_rows(state_coverage) %>%
+  group_by(`Geographic Scale`) %>%
+  arrange(desc(`Percent Contained in Interval`),
+          .by_group=TRUE) %>%
+  ungroup() %>%
+  select(-`Geographic Scale`) %>%
+  kbl(caption = "\\label{table:coverage}Coverage of Covidestim Medians",
+      booktabs=TRUE,  
+      escape=FALSE,
+      digits=3) %>%
+  kable_styling() %>%
+  group_rows(start_row=1, end_row =4, group_label= "County") %>%
+  group_rows(start_row=5, end_row =8, group_label= "State") 
+
+
+```
+
+```{r,eval=FALSE}
+
+county_coverage <- county_covidestim %>%
+ mutate(in_interval = case_when(
+    exp_cases_lb <= infections & 
+      infections <= exp_cases_ub ~ "Contained in Interval",
+    exp_cases_lb  > infections  ~ "Below Interval",
+    exp_cases_ub < infections ~ "Above Interval"
+  ) ) %>%
+  group_by(version, in_interval) %>%
+  summarize(n=n()) %>%
+  group_by(version) %>%
+  mutate(total = sum(n)) %>%
+  ungroup() %>%
+  mutate(prop = n/total) %>%
+  select(version, prop, in_interval) %>%
+  pivot_wider(names_from = in_interval, values_from=prop, names_prefix="Percent ") %>%
+  mutate(across(contains("Percent"), ~.x*100 )) %>%
+ # mutate(across(contains("Percent"), ~paste0(round(.x,3),"%")))
+  left_join(versions) %>%
+  select( # `Geographic Scale`,
+         Implementation = vlabel, 
+         `Percent Above Interval`,
+         `Percent Contained in Interval`,
+          `Percent Below Interval`)
+
+```
 

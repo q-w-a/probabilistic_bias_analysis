@@ -291,6 +291,8 @@ all_versions <- state_res %>%
   summarize(state_n=n_distinct(version)) %>%
   filter(state_n == max(state_n)) %>%
   pull(state)
+
+
 ```
 
 
@@ -393,10 +395,13 @@ state_res %>%
 
 ```
 
-### Original Priors versus CTIS Priors (that do not vary)
+### Wu *et al.*'s Priors versus CTIS Priors (that do not vary)
 
-```{r}
+```{r, fig.width=14,fig.height=9}
 
+colors_labs <- state_res %>%
+  filter(version %in% c("v1","v7")) %>%
+  pull(vlabel) %>% unique()
 
 state_res %>%
   filter(version %in% c("v1","v7") & state %in% sample(unique(.$state),15)) %>%
@@ -405,8 +410,7 @@ state_res %>%
              ymin = exp_cases_lb,
              ymax = exp_cases_ub,
              fill=vlabel),
-             alpha = .6,
-             show.legend=FALSE,
+             alpha = .6
              ) +
   facet_wrap(~name, 
              labeller=labeller(vlabel =as_labeller(
@@ -419,11 +423,14 @@ state_res %>%
   theme_c(
           legend.position = "top",
           ) +
-  viridis::scale_fill_viridis(option="magma", begin=.1,end=.9, discrete=TRUE)  +
+  viridis::scale_fill_viridis(option="magma", begin=.1,end=.9, discrete=TRUE,
+                              breaks =(colors_labs),
+                              labels=TeX(as.character(colors_labs)))  +
   labs(x="",
        y = "Estimated Infections",
        title = "Simulation Intervals Over Time",
-       subtitle = "By State") 
+       subtitle = "By State",
+       fill = "") 
 
 
 ```
@@ -518,7 +525,7 @@ subset %>%
 
 ```
 
-```{r,eval=save_figures, fig.height=10,fig.width=12}
+```{r,eval=save_figures, fig.height=10,fig.width=14}
 
 ggsave(here('figures/ratio-estimated-to-observed-all-states.pdf'))
 
@@ -878,3 +885,6 @@ r %>%
   scale_y_reverse(breaks=seq(1,51, by=9))
 
 ```
+
+
+
