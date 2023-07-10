@@ -607,6 +607,63 @@ get_biweekly_wastewater <- function() {
 }
 
 
+#------------- Variant Data -----------------
+
+get_variant_proportions <- function() {
+  
+  variant <- "https://data.cdc.gov/resource/jr58-6ysp.json?$limit=50000&$where=week_ending between '2021-02-18T00:00:00.000' and '2022-03-01T00:00:00.000'&usa_or_hhsregion=USA"
+  variant <- httr::GET(URLencode(variant))
+  
+  
+  # only go to the 6th because these are already weekly counts
+  # get the last couple weeks of 2021
+  variant <-jsonlite::fromJSON(
+    httr::content(variant,
+                  as = "text",
+                  encoding = "UTF-8"),
+    simplifyVector = TRUE,
+    flatten = TRUE)  %>%
+    as_tibble() 
+  
+  saveRDS(variant, 'data/data_raw/variant_prop.RDS')
+  
+  
+  # https://www.cdc.gov/coronavirus/2019-ncov/variants/variant-classifications.html
+  variant <- variant %>% 
+    mutate(week_end_date = substr(week_ending, 1,10),
+           week_end_date=ymd(week_end_date)) %>%
+    mutate(variant_category = case_when(
+      grepl("B[.]1[.]1[.]529|BA[.]1|BA[.]2|BA[.]4|BA[.]5", variant) ~ "Omicron",
+      variant %in% c("B.1.621", "B.1.621.1") ~ "Mu",
+      variant == "B.1.1.7" ~ "Alpha",
+      grepl("B[.]1[.]351", variant) ~ "Beta",
+      grepl("P.1", variant) ~"Gamma",
+      grepl("B[.]1[.]617[.]2", variant) ~ "Delta",
+      variant %in% c("B.1.427" ,"B.1.429") ~ "Epsilon",
+      variant == "B.1.525" ~ "Eta",
+      variant == "Other" ~ "Other"
+    )) %>%
+    mutate(share = as.numeric(share),
+           creation_date = ymd(substr(creation_date,1,10))) %>%
+    filter(modeltype == "weighted" & time_interval=="weekly") %>%
+    group_by(variant, week_end_date, variant_category, time_interval) %>% 
+    slice_max(n=1, order_by=creation_date) %>%
+    group_by(variant_category, week_end_date, time_interval) %>%
+    summarize(share =sum(share, na.rm=TRUE))
+  
+  
+  variant <- variant %>%
+    filter(variant_category != "Other") %>%
+    select(week_end_date, variant_category, share) %>%
+    # week beginning rather than week end
+    mutate(week = week_end_date - days(7)) %>%
+    filter(!is.na(variant_category)) 
+  
+
+  
+  return(variant)
+  
+}
 
 
 

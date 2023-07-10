@@ -57,6 +57,9 @@ list(
   tar_target(
     name = ma_biweekly_county,
     command = get_mass_county()),
+  tar_target(
+    name = variant,
+    command = get_variant_proportions()),
   
   #---------------- state-level analysis -------------------
   # set priors
