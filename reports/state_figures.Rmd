@@ -27,8 +27,8 @@ library(latex2exp)
 library(cowplot)
 
 
-filter_versions <- FALSE
-save_figures <- FALSE
+filter_versions <- TRUE
+save_figures <- TRUE
 
 ```
 

@@ -17,7 +17,7 @@ knit: (function(input, ...) {
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE,cache=FALSE, fig.width=10, fig.height=7)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE,cache=TRUE, fig.width=10, fig.height=7)
 
 library(tidyverse)
 library(targets)
@@ -1889,7 +1889,7 @@ county %>%
   scale_x_continuous(limits=c(lb,.3), n.breaks=6)
 
 
-ggsave(here('figures/testing_rate_ratio-county.pdf'), width=11,height=7, dpi=400)
+ggsave(here('figures/testing-rate-ratio-county.pdf'), width=11,height=7, dpi=400)
 
 ```
 

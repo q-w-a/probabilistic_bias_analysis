@@ -36,7 +36,7 @@ library(here)
 
 ## State-level Estimates
 
-For simplicity, at the state-level we focus on the implementation that does not vary by state or date. This also allows us to consider the entirety of 2021, since survey data is only available for dates after March 20, 2021. A full comparison of implementations is included in Supplementary Figure covidestim-concordance-state. 
+For simplicity, at the state-level we focus on the implementation where the priors do not vary by state or date. This also allows us to consider the entirety of 2021, since survey data is only available for dates after March 20, 2021. A full comparison of implementations is included in Supplementary Figure covidestim-concordance-state. 
 
 In Figure \@ref(fig:ratio-estimated-to-observed-by-wave), we consider three distinct two-week intervals during waves of the pandemic in 2021. 
 
@@ -87,7 +87,7 @@ include_graphics(here('figures/simulation-intervals-color-version-county.pdf'))
 
 ```{r testrate-v-ratio, fig.cap  = 'The ratio of the median estimated infections to observed infections plotted against the testing rate, where the testing rate is calculated as the total number tested in a two-week interval over the population size. When the priors are the same for all time intervals, there is minimal variability relationship between the testing rate and the ratio of estimated to observed infections, since the correction for incomplete testing and diagnostic test inaccuracy is identical for each time-interval. However, when we allow $\\beta$ or $\\Pr(S_1|\\text{untested})$ to vary over time, there is more variability in the relationship. A horizontal line in red at 1 is included to reference; a ratio of exactly 1 would indicate no infections went unobserved.'}
 
-include_graphics(here('figures/testing_rate_ratio-county.pdf'))
+include_graphics(here('figures/testing-rate-ratio-county.pdf'))
 
 ```
 
@@ -143,7 +143,10 @@ county_coverage %>%
   row_spec(1:(row_num-1),  hline_after = TRUE, 
            extra_css = "border-bottom: 1px solid;") %>%
   row_spec(0, font_size=11, bold=TRUE) %>%
-  footnote(general = "The percent of simulation intervals where the Covidestim median falls below, within, or above the interval, when considering all simulation intervals for that implementation and geographic scale.", general_title ="", footnote_as_chunk=TRUE, threeparttable=TRUE)
+  footnote(general = paste0("The percent of simulation intervals where the Covidestim median falls below, within, or above the interval,",
+  "when considering all simulation intervals for that implementation and geographic scale.",
+  "Implementations are ordered from those with the highest proportion of Covidestim medians contained in the interval, to the lowest."),
+  general_title ="", footnote_as_chunk=TRUE, threeparttable=TRUE)
 
 
 ```
@@ -191,11 +194,23 @@ include_graphics(here('figures/analysis_diagram.png'))
 
 ### Specification of Priors 
 
+```{r}
 
+```
+
+
+#### $\alpha$
+
+
+#### $\beta$ 
+
+
+#### $\Pr(S_1| \text{untested})$
 
 #### $\Pr(S_0|\text{test}_+,\text{untested})$ \newline\newline
 
 
+\vspace{4 mm}
 
 There is substantial heterogeneity in estimates of the percent of infections that are asymptomatic. This is in part due to distinct study populations and selection criteria. In particular, estimates from screening studies may be better estimates of the asymptomatic rate among the untested population: estimates from studies where the population was not screened, and as such was comprised of individuals that sought out a PCR test, may include a higher proportion of symptomatic individuals, biasing estimates of the asymptomatic rate downwards. 
 
