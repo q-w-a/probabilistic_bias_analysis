@@ -8,7 +8,9 @@ output:
     number_sections: false
 header-includes:
  \usepackage{float}
-  
+ \usepackage{amsmath}
+bibliography: "`r rbbt::bbt_write_bib('bib/manuscript.bib', overwrite = TRUE)`"
+csl: "csl/nature.csl"
 ---
 
 
@@ -51,18 +53,24 @@ include_graphics(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
 
 In Figure \@ref(fig:simulation-intervals-state), we see the simulation intervals for all two-week intervals and all states.
 
-```{r simulation-intervals-state, fig.cap="Simulation intervals for each 2-week interval considered, for all states. For any given state, each vertical bar shows the 2.5\\% percentile and 97.5\\% percentile for the total number of infections in that two-week interval. Covidestim intervals summed over the same two-week time-scale are shown in red. The scale on the $y$-axis is distinct across states to highlight differences across time within each state."}
+```{r simulation-intervals-state, fig.cap="Simulation intervals for each 2-week interval considered, for all states. For any given state, each vertical bar shows the 2.5\\% percentile and 97.5\\% percentile for the total number of infections in that two-week interval. Covidestim intervals summed over the same two-week time-scale are shown in red. The scale on the $y$-axis is distinct across states to highlight differences across time within each state.", fig.height=10,fig.width=14}
 
 include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 ```
 
+```{r ma-heatmap, fig.cap=" The ratio of estimated to observed infections across time for counties in Massachusetts. Counties are ordered by the median ratio across time intervals, from the highest ratio (Barnstable) to the lowest (Hampshire). Similar to what we see at the state level, the highest ratios were during the summer of 2021 during the Delta wave -- a period of decreased testing. The span of time with the highest ratio of estimated to observed infections was July 2, 2021 through July 30, 2021."}
+
+include_graphics(here('figures/ma_county_heatmap.pdf'))
+
+
+```
 
 
 ## County Level Estimates in Massachusetts
 
 
-```{r, fig.width=15, fig.height=16}
+```{r, fig.width=15, fig.height=16,  fig.cap = "Simulation intervals for counties in Massachusetts. Each interval corresponds to a 95\\% simulation interval for the total number of estimated infections for that county in that two-week time interval. The columns represent different implementations of the probabilistic bias analysis. The first column corresponds to the implementation where we specify priors that are the same for all dates. For the implementation in the second column, we center the distribution of $\\beta$ at the ratio of the screening test positivity to the overall test positivity from the survey. For the third column, we center the distribution of $\\Pr(S_1|\\text{untested})$ at the percentage of the population experiencing COVID-19-like illness from the survey. The fourth column centers both  $\\beta$ and $\\Pr(S_1|\\text{untested})$ at the aforementioned values."}
 
 include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf'))
 
@@ -70,9 +78,16 @@ include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf')
 
 
 
-```{r,fig.width=12}
+```{r, fig.width=15,  fig.cap = "Simulation intervals for counties in Massachusetts, colored by the implementation of probabilistic bias analysis. The implementation that centers both $\\Pr(S_1|\\text{untested})$ and $\\beta$ at their empirical values is consistently the highest among the implementations, and the version only centering $\\Pr(S_1|\\text{untested})$ at the survey value is highly concordant with the version where the priors do not vary by date."}
 
 include_graphics(here('figures/simulation-intervals-color-version-county.pdf'))
+
+```
+
+
+```{r testrate-v-ratio, fig.cap  = 'The ratio of the median estimated infections to observed infections plotted against the testing rate, where the testing rate is calculated as the total number tested in a two-week interval over the population size. When the priors are the same for all time intervals, there is minimal variability relationship between the testing rate and the ratio of estimated to observed infections, since the correction for incomplete testing and diagnostic test inaccuracy is identical for each time-interval. However, when we allow $\\beta$ or $\\Pr(S_1|\\text{untested})$ to vary over time, there is more variability in the relationship. A horizontal line in red at 1 is included to reference; a ratio of exactly 1 would indicate no infections went unobserved.'}
+
+include_graphics(here('figures/testing_rate_ratio-county.pdf'))
 
 ```
 
@@ -93,14 +108,54 @@ include_graphics(
 ```
 
 
-NOTE add (a), (b) to this figure
+Table \@ref(table:coverage) is 
+
+\renewcommand{\arraystretch}{2}
 
 ```{r}
+
+library(tidyverse)
+library(kableExtra)
+
+county_coverage <- readRDS(here("figures/table_data/county_coverage.RDS"))
+state_coverage <- readRDS(here("figures/table_data/state_coverage.RDS"))
+
+row_num <- nrow(county_coverage) + nrow(state_coverage)
+
+county_coverage %>%
+  bind_rows(state_coverage) %>%
+  group_by(`Geographic Scale`) %>%
+  arrange(desc(`Percent Contained in Interval`),
+          .by_group=TRUE) %>%
+  ungroup() %>%
+  select(-`Geographic Scale`) %>%
+  kbl(caption = "\\label{table:coverage}Coverage of Covidestim Medians at the County and State Levels",
+      booktabs=TRUE,  
+      escape=FALSE,
+      digits=3) %>%
+  kable_styling(latex_options=c("scale_down","HOLD_position"))  %>%
+  group_rows(start_row=1, end_row =4, group_label= "County", 
+             latex_gap_space = "0.7em",
+             hline_after = TRUE) %>%
+  group_rows(start_row=5, end_row =8, group_label= "State",
+             latex_gap_space = "0.7em",
+             hline_after = TRUE) %>%
+  row_spec(1:(row_num-1),  hline_after = TRUE, 
+           extra_css = "border-bottom: 1px solid;") %>%
+  row_spec(0, font_size=11, bold=TRUE) %>%
+  footnote(general = "The percent of simulation intervals where the Covidestim median falls below, within, or above the interval, when considering all simulation intervals for that implementation and geographic scale.", general_title ="", footnote_as_chunk=TRUE, threeparttable=TRUE)
+
+
+```
+
+
+```{r,eval=FALSE}
 
 include_graphics(here('figures/simulation-intervals-county.pdf'))
 
 
 ```
+
 
 
 
@@ -123,8 +178,42 @@ Biobot analytics ...
 
 ## Statistical Methods
 
+```{r,out.width='70%', fig.align='center'}
+
+include_graphics(here('figures/analysis_diagram.png'))
+
+```
+
+
 ### Probabilistic bias analysis
 
 ### Bayesian Melding 
 
 ### Specification of Priors 
+
+
+
+#### $\Pr(S_0|\text{test}_+,\text{untested})$ \newline\newline
+
+
+
+There is substantial heterogeneity in estimates of the percent of infections that are asymptomatic. This is in part due to distinct study populations and selection criteria. In particular, estimates from screening studies may be better estimates of the asymptomatic rate among the untested population: estimates from studies where the population was not screened, and as such was comprised of individuals that sought out a PCR test, may include a higher proportion of symptomatic individuals, biasing estimates of the asymptomatic rate downwards. 
+
+One meta-analysis included studies across the globe as of February 4, 2021, and estimated the pooled percent of asymptomatic infections among confirmed infections to be 40.50% (95% CI 33.50%-47.50%) [@ma2021]. This analysis did not restrict to screening studies. Another meta-analysis, when restricting to screening studies, found the pooled asymptomatic percentage to be 47.3% (95% CI, 34.0 - 61.0%) [@sah2021]. Both meta-analyses noted the substantial amount of heterogeneity in the percent of asymptomatic infections.
+
+In a large screening study where the sample was individuals arriving from overseas, the asymptomatic rate was 76.8% [@fang2023]. A screening study among children admitted to a pediatric emergency department between May 2020 and January 2021 found  the asymptomatic rate to be 51.7% [@ford2022]. 
+
+Several studies were conducted among university students. Among students at the University of Arizona in the fall semester of 2020, including students who sought testing and who were required to test, the asymptomatic rate of infection was 79.2%. A study at the University of Notre Dame distinguished between presymptomatic infection and asymptomatic infection, and found found 32% to be asymptomatic throughout the entire course of infection, 27.0% to be presymptomatic, and 40.5% to be symptomatic.  The asymptomatic rate among nonresidential students participating in the surveillance testing system at Clemson University was 69%.The generalizability of these studies is limited given that students are typically healthy and as such may be more likely to experience asymptomatic infection.
+
+Vaccine coverage also may influence the asymptomatic rate. In a study in Israel on the effectiveness of the Pfizer–BioNTech mRNA COVID-19 vaccine BNT162b2, 55.7% (49,138 out of 88203) of infections were asymptomatic in the unvaccinated group, and 68.2% of infections  (3632 out of 5324) of infections were asymptomatic in the vaccinated group. 
+
+Numerous additional factors contribute to the heterogeneity we see among estimates of the percent of infections that are asymptomatic, including community prevalence, the study population, and the time period when the study population was tested. The use of different definitions also may contribute. This includes the definition of a symptomatic infection, since our understanding of the clinical presentation of COVID-19 has evolved over time [@sah2021], as well as the definition of asymptomatic, since some define asymptomatic to include presymptomatic cases, where people that had no symptoms upon testing positive but may have went on to develop symptoms at a later date, and truly asymptomatic cases, where an infected individual never goes on to develop symptoms. 
+
+Because of the heterogeneity in estimates of the percent of infections that are asymptomatic, for this prior we specified a beta distribution with the majority of the density between 0.3 and 0.8, with a mean of 0.55 and standard deviation of 0.12.
+
+
+
+### Limitations
+
+
+# References
