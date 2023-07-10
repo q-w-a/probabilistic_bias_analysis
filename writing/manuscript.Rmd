@@ -36,11 +36,13 @@ library(here)
 
 ## State-level Estimates
 
-For simplicity, at the state-level we focus on the implementation where the priors do not vary by state or date. This also allows us to consider the entirety of 2021, since survey data is only available for dates after March 20, 2021. A full comparison of implementations is included in Supplementary Figure covidestim-concordance-state. 
+At both the state and county levels, we considered multiple implementations of the probabilistic bias analysis to compare estimates produced using different specification of the priors using survey data from the COVID-19 Trends and Impact Survey [@salomon2021a].
+
+However, for simplicity, at the state-level we focus on the implementation where the priors do not vary by state or date. This also allows us to consider the entirety of 2021, since survey data is only available for dates after March 20, 2021. A full comparison of implementations is included in Supplementary Figure covidestim-concordance-state. 
 
 In Figure \@ref(fig:ratio-estimated-to-observed-by-wave), we consider three distinct two-week intervals during waves of the pandemic in 2021. 
 
-Although prevalence of COVID-19 was highest during the time interval during the Omicron wave, we see that the ratio of estimated infections to observed infections is higher during the time intervals in the alpha and delta waves. This distinction is explained by the differences in testing rates during these period: the testing rate during this two-week interval during the omicron wave was 2.4 times that of the alpha wave and 4.9 times that of the delta wave.
+Although incidence of COVID-19 was highest during the time interval during the Omicron wave, as is clear in Figure  \@ref(fig:simulation-intervals-state),  we see that the ratio of estimated infections to observed infections is higher during the time intervals in the alpha and delta waves. This distinction is explained by the differences in testing rates during these period: on average, the testing rate during this two-week interval during the omicron wave was 2.4 times that of the alpha wave and 4.9 times that of the delta wave. This particular time interval during the delta wave; June 16, 2021 through July 1st, 2021; had the maximum ratio of estimated to observed infections, and corresponded to the minimum testing rate (Supplementary Figure testrate-low-summer).
 
 Several states consistently have among the highest or lowest ratios of estimated to observed infections. In particular, there are 6 states with among the lowest 10 ratios of estimated infections to observed infections, and as such the highest case ascertainment rates, for more than 80% of time intervals considered. These states were Rhode Island, Massachusetts, District of Columbia, Alaska, New York, and Vermont. Meanwhile, states that had the highest ratios, and equivalently the lowest case ascertainment rates, include Mississippi, South Dakota, Oklahoma, Nebraska, and Tennessee.
 
@@ -51,13 +53,51 @@ include_graphics(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
 
 ```
 
-In Figure \@ref(fig:simulation-intervals-state), we see the simulation intervals for all two-week intervals and all states.
+
+### Comparison to Covidestim
+
+Because there is no established ground truth for the true number of infections for any time-interval, a useful source of comparison is other models that also estimate the true number of incident infections. Covidestim is a notable Bayesian nowcasting model that has been maintained throughout the course of the pandemic, sharing publicly available estimates at the state and county levels [@chitwood2022]. Consequently, we compare our estimates to Covidestim, with recognition that the Covidestim model is not a ground truth, and this comparison serves primarily to gain insight into the times and locations where estimates are concordant or discordant rather than to validate the approach. Given the true number of infections is unobserved, we are to some extent operating in the unknown, and must rely on assumptions based on available data. 
+
+In Figure \@ref(fig:simulation-intervals-state), we see the simulation intervals for all two-week intervals and all states as well as the 95% Covidestim credible intervals summed to be on the same time scale. 
+We see agreement is much higher before the time period spanning December 2021 through January 2022, where Covidestim intervals tend to be higher than the probabilistic bias intervals. This period corresponds to the Omicron wave of the pandemic (Supplementary Figure michigan-variant). This was a major shift in the pandemic: the Omicron variant is highly transmissible compared to previous variants, and it has immune invasion capacity, which means vaccines provides less protection against infection [@andrews2022]. Omicron also is associated with a lower infection fatality ratio [@liu2022], as well as milder infection overall, which may influence testing behavior. Omicron's rise was rapid too, presumably as a result of this enhanced transmissibility and immune escape;  it became the dominant variant over the course of a single month. 
+
+As a result of these dramatic changes, Chitwood *et al.*@chitwood2022 made substantial changes to Covidestim, as noted in the model change log. Because the variant causes much milder infections, the infection fatality for Omicron infections is lower than previous variants, and death counts were much lower relative to the number of infections. To handle this change, rather than fitting model with deaths, they switched to using hospitalizations. They also allowed for the possibility of reinfections, since although reinfections were more rare with previous variants, Omicron is associated with higher reinfection rates [@pulliam2022]. The changes in the model may contribute to the differences we see between the probabilistic bias intervals and Covidestim intervals during the Omicron wave. 
+
+Another difference we see is in the months of the summer of 2021, where the increase in Covidestim estimates appears lagged in comparison to the probabilistic bias simulation intervals. The difference we see between the Covidestim estimates and probabilistic bias intervals is likely a result of the way these approaches treat incomplete testing. The focus of the probabilistic bias analysis is to correct for incomplete testing, and as such the method is sensitive to changes in the total number tested and the positivity rate. By contrast, while Covidestim models probabilities of diagnosis by symptom state to allow for variation in case ascertainment, the total number of tests is not an input into the model, so model estimates are not affected by changes in testing rate. This is particularly relevant during the summer of 2021, when an increase in test positivity preceded the increase in observed tests, leading to an increase in the probabilistic bias simulation intervals that precedes the increase in Covidestim estimates. 
+
 
 ```{r simulation-intervals-state, fig.cap="Simulation intervals for each 2-week interval considered, for all states. For any given state, each vertical bar shows the 2.5\\% percentile and 97.5\\% percentile for the total number of infections in that two-week interval. Covidestim intervals summed over the same two-week time-scale are shown in red. The scale on the $y$-axis is distinct across states to highlight differences across time within each state.", fig.height=10,fig.width=14}
 
 include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 ```
+
+
+## County Level Estimates in Massachusetts
+
+At the county level, this approach to approximating the true number of infections is only possible in a subset of the counties in the United States due to the need for both positive tests and total tests. While positive tests are frequently reported at the county level, total tests are not. 
+
+We focus on Massachussetts because this state is the only state that reports both positive and total tests and has the most counties where wastewater data was reported throughout the entire time period of interest. Wastewater data here is useful in the sense that it is inherently not subject to the same biases as voluntary testing data, since it captures anyone in the wastewater catchment area, and as such is not influenced by more symptomatic people being more likely to be tested or differences in access to testing.
+
+In Figure (CHOOSE BETWEEN VERSION BY COLOR AND FACETED), we present simulation intervals for each implementation of probabilistic bias analysis.
+
+In the first three implementations, the prior distributions specified for the bias parameters vary by state and date. In particular, we use survey data from the COVID-19 Trends and Impact Survey [@salomon2021a] to inform the prior distributions for two of the bias parameters: the probability of having symptoms among the untested population ($\Pr(S_1|\text{untested})$), and the parameter $\beta$, which represents the ratio of the test positivity among members of the untested population who have no symptoms to the overall test positivity. More detail on these implementations is provided in the [Methods](#Methods) section. In the last implementation, the prior distributions are informed by the distributions from the survey data across all dates and states, but the same prior distributions are used for all states and time intervals considered. While there is substantial overlap among all of the versions, we see the implementation allowing $\beta$ and $\Pr(S_1|\text{untested})$ to vary by state and date tends to be the highest, followed by that only allowing $\beta$ to vary by state and date,  followed by that only allowing $\Pr(S_1|\text{untested})$ to vary by state and date, and lastly the implementation that does not vary the priors by state or date tends to produce the lowest estimates.  
+
+```{r sim-intervals-faceted-county, fig.width=15, fig.height=16,  fig.cap = "Simulation intervals for counties in Massachusetts. Each interval corresponds to a 95\\% simulation interval for the total number of estimated infections for that county in that two-week time interval. The columns represent different implementations of the probabilistic bias analysis: in the first through the third columns, the priors vary by state and date, while for the fourth, they are the same for all states and time intervals considered. For the implementation in the first column, we center the distribution of $\\beta$ at the ratio of the screening test positivity to the overall test positivity from the survey, and we center the distribution of $\\Pr(S_1|\\text{untested})$ at the percentage of the population experiencing COVID-19-like illness from the survey for each two-week interval. The second column centers only $\\beta$ at the aformentioned value, and the third column only centers $\\Pr(S_1|\\text{untested})$ at the aforementioned value. The fourth column corresponds to the implementation where we specify priors that are the same for all dates. The implementation that centers both $\\Pr(S_1|\\text{untested})$ and $\\beta$ at the survey values is consistently the highest among the implementations, followed by the implementation that centers only $\\beta$ at the survey value, followed then by the implementation only centering $\\Pr(S_1|\\text{untested})$ at the survey value, and then the lowest among the implementations is that where the priors do not vary by date."}
+
+include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf'))
+
+```
+
+
+```{r sim-intervals-color-county, fig.width=15,  fig.cap = "Simulation intervals for counties in Massachusetts, colored by the implementation of probabilistic bias analysis. In the first three implementations, the priors vary by state and date, while for the fourth, they are the same for all states and time intervals considered. For the first implementation, we center the distribution of $\\beta$ at the ratio of the screening test positivity to the overall test positivity from the survey, and we center the distribution of $\\Pr(S_1|\\text{untested})$ at the percentage of the population experiencing COVID-19-like illness from the survey for each two-week interval. The second implementation, we center only $\\beta$ at the aformentioned value, and the for the next we only center $\\Pr(S_1|\\text{untested})$ at the aforementioned value. The last implementation corresponds to the implementation where we specify priors that are the same for all dates. The implementation that centers both $\\Pr(S_1|\\text{untested})$ and $\\beta$ at the survey values is consistently the highest among the implementations, followed by the implementation that centers only $\\beta$ at the survey value, followed then by the implementation only centering $\\Pr(S_1|\\text{untested})$ at the survey value, and then the lowest among the implementations is that where the priors do not vary by date."}
+
+include_graphics(here('figures/simulation-intervals-color-version-county.pdf'))
+
+```
+
+Also of interest beyond the total numbers of infections is the ratio of the infections that are estimated to those that were observed, as this gives us a sense for the case ascertainment at different time periods in the pandemic. We see in Figure \@ref(fig:ma-heatmap) that the two-week interval estimated to have the highest ratio of estimated to observed infections was July 2, 2021 through July 30, 2021, during the delta wave. This corresponds to a similar time frame that we saw at the state-level in Figure \@ref(fig:ratio-estimated-to-observed-by-wave). Hamsphire County and Suffolk County were consistently among the lowest with regard to the ratio of estimated to observed infections, which may be explained by the screening testing occurring at universities in these counties.
+
 
 ```{r ma-heatmap, fig.cap=" The ratio of estimated to observed infections across time for counties in Massachusetts. Counties are ordered by the median ratio across time intervals, from the highest ratio (Barnstable) to the lowest (Hampshire). Similar to what we see at the state level, the highest ratios were during the summer of 2021 during the Delta wave -- a period of decreased testing. The span of time with the highest ratio of estimated to observed infections was July 2, 2021 through July 30, 2021."}
 
@@ -67,22 +107,14 @@ include_graphics(here('figures/ma_county_heatmap.pdf'))
 ```
 
 
-## County Level Estimates in Massachusetts
+As we see in Figure \@ref(fig:testrate-v-ratio), the nature of the relationship between the testing rate and the ratio of estimated infections to observed infections depends on whether we allow $\beta$ and $\Pr(S_1|\text{untested})$ to vary by location and date. In particular, when we sample from the same priors for every correction (the first panel of Figure \@ref(fig:testrate-v-ratio), we see there is little variability in the relationship between the testing rate and median estimated infections, because the form of the correction is identical for each two-week interval and state considered. Allowing $\beta$ and/or $\Pr(S_1|\text{untested})$ to vary by time and location introduces additional variability in the relationship between the ratio of estimated infections to observed and testing rate.
 
+The nonlinearity of the relationship between the testing rate and the ratio of estimated infections to observed infections is more clear when we consider how we calculate the positives among the untested population. To do this, we split up the population $N$ into the number tested, $N_{untested}$, and untested, $N_{tested}$, for that two-week interval. 
 
-```{r, fig.width=15, fig.height=16,  fig.cap = "Simulation intervals for counties in Massachusetts. Each interval corresponds to a 95\\% simulation interval for the total number of estimated infections for that county in that two-week time interval. The columns represent different implementations of the probabilistic bias analysis. The first column corresponds to the implementation where we specify priors that are the same for all dates. For the implementation in the second column, we center the distribution of $\\beta$ at the ratio of the screening test positivity to the overall test positivity from the survey. For the third column, we center the distribution of $\\Pr(S_1|\\text{untested})$ at the percentage of the population experiencing COVID-19-like illness from the survey. The fourth column centers both  $\\beta$ and $\\Pr(S_1|\\text{untested})$ at the aforementioned values."}
+Denoting $N^*$ to be the number who would test positive for COVID-19 if they were tested, on the $y$-axis, the ratio of estimated infections to observed infections is approximately^[This isn't exactly the estimated infections, because for simplicity of notation we are not writing out the correction for test inaccuracy.]
+$\frac{N^*_{\text{tested}} + N^*_{\text{untested}}}{N^*_{\text{tested}}},$ where we calculate $N^*_{\text{untested}}$ using the specified priors, and $N^*_{\text{untested}}$ is the observed positive tests.
 
-include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf'))
-
-```
-
-
-
-```{r, fig.width=15,  fig.cap = "Simulation intervals for counties in Massachusetts, colored by the implementation of probabilistic bias analysis. The implementation that centers both $\\Pr(S_1|\\text{untested})$ and $\\beta$ at their empirical values is consistently the highest among the implementations, and the version only centering $\\Pr(S_1|\\text{untested})$ at the survey value is highly concordant with the version where the priors do not vary by date."}
-
-include_graphics(here('figures/simulation-intervals-color-version-county.pdf'))
-
-```
+On the $x$-axis, we have the number tested over the population size, $\dfrac{N_{\text{tested}}}{N}$. Thus, we see the trend in each panel where for small changes in testing rate when the testing rate is very low, the ratio of unobserved to unobserved is very high since $N^*_{\text{untested}}$ will be large relative  $N^*_{\text{tested}}$, that is, a large proportion of infections are going undetected. However, with higher testing rates,  $N^*_{\text{untested}}$ will be smaller relative  $N^*_{\text{tested}}$, and the ratio of estimated to observed infections nears one.
 
 
 ```{r testrate-v-ratio, fig.cap  = 'The ratio of the median estimated infections to observed infections plotted against the testing rate, where the testing rate is calculated as the total number tested in a two-week interval over the population size. When the priors are the same for all time intervals, there is minimal variability relationship between the testing rate and the ratio of estimated to observed infections, since the correction for incomplete testing and diagnostic test inaccuracy is identical for each time-interval. However, when we allow $\\beta$ or $\\Pr(S_1|\\text{untested})$ to vary over time, there is more variability in the relationship. A horizontal line in red at 1 is included to reference; a ratio of exactly 1 would indicate no infections went unobserved.'}
@@ -91,14 +123,14 @@ include_graphics(here('figures/testing-rate-ratio-county.pdf'))
 
 ```
 
-
 ### Comparison to Wastewater Data and Covidestim Estimates
 
-Because there is no established ground truth to compare to regarding the true number of infections for any time-interval, at the county level we compare our results to two distincts sources of information: wastewater data aggregated at the county-level, and results from a previously published Bayesian evidence synthesis model, Covidestim. This also allows us to compare how different implementations of probabilistic bias analysis compare to Covidestim estimates and wastewater concentrations.
+As with the state level results, we also compare estimates at the county-level to Covidestim estimates. However, at the county-level, we proceeded with Massachusetts specifically with the aim of providing another source of comparison: wastewater concentrations.
 
-Our first comparison considers the correlations between wastewater concentrations and the probabilistic bias estimates as well as between the Covidestim estimates and the probabilistic bias estimates (Figure \@ref(fig:correlations)).
+We see in Figure \@ref(fig:correlations)a) that for all implementations, the probabilistic bias estimates are highly correlated with wastewater concentrations, and in Figure \@ref(fig:correlations)b) we see they also highly correlated with the Covidestim estimates. The correlations in both cases are very similar between implementations, differing by less than 0.01. 
 
-```{r correlations, fig.cap ="Considering the correlations between probablistic bias estimates and wastewater concentrations (a) and between probablistic bias estimates and Covidestim estimates (b). We see that all implementations considered are highly correlated with both wastewater concentrations and Covidestim estimates. The implementation that does not allow priors to vary by state or date has the highest correlations."}
+
+```{r correlations, fig.cap ="Considering the correlations between the probabilistic bias estimates and wastewater concentrations (a) and between probablistic bias estimates and Covidestim estimates (b). We see that all implementations considered are highly correlated with both wastewater concentrations and Covidestim estimates. In both panels, each point is a county-biweek, where the value on the $x$-axis is the median of the simulation interval for that county in that two-week interval. For (a), the value on the $y$-axis is the mean wastewater concentration for that county and two-week interval. For (b), the value on the $y$-axis is the median of the Covidestim credible interval for that county, summed to be on the same two-week-interval time scale. The correlations are highly similar between implementations, differing by less than 0.01."}
 
 include_graphics(
   here('figures/correlations-wastewater-by-version.pdf')
@@ -194,7 +226,9 @@ include_graphics(here('figures/analysis_diagram.png'))
 
 ### Specification of Priors 
 
-```{r}
+```{r melding-priors, fig.width=9,fig.height=9}
+
+include_graphics(here('figures/melding-priors.pdf'))
 
 ```
 
@@ -230,5 +264,10 @@ Because of the heterogeneity in estimates of the percent of infections that are 
 
 ### Limitations
 
-
+- Validation:
+  - Wastewater encatchments do not fall exactly on county lines, so aggregation here contains limited information
+  - Covidestim -- sum of daily medians != median for entire two-week time interval
+- Repeat testing may bias estimates in places where this form of testing comprises a substantial proportion of total testing, but data on people-viral-total and people-viral-positive is not widely available 
+  
 # References
+

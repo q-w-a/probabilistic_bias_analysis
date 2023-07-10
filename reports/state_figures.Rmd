@@ -17,7 +17,7 @@ knit: (function(input, ...) {
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=FALSE)
+knitr::opts_chunk$set(echo = TRUE, message=FALSE,warning=FALSE,cache=TRUE)
 
 library(tidyverse)
 library(targets)
@@ -57,7 +57,6 @@ versions <- tibble(
         "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ) )
 )
-
 
 
 # read state-level results
@@ -347,7 +346,7 @@ state_res %>%
 
 
 subset <- state_res %>%
-  filter(vlabel ==  "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$")
+  filter(vlabel ==  "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$") 
 
 pal <- c("#247C90", "red")
 
@@ -438,14 +437,22 @@ state_res %>%
 
 ## Compare States
 
-```{r, fig.height=14, fig.width=11}
+```{r, fig.height=14, fig.width=12}
+
+
+
+comp_state_pal <- c("#247C90", "red")
+
+names(comp_state_pal) <- c('Probabilistic Bias Analysis', "Covidestim")
 
 subset %>%
+   # mutate(vlabel = gsub("$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$",
+   #                     "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", as.character(vlabel))) %>% 
    ggplot() +
   geom_ribbon(aes(x = date, 
              ymin = exp_cases_lb,
              ymax = exp_cases_ub,
-             fill = vlabel),
+             fill = 'Probabilistic Bias Analysis'),
              alpha = .8,
              show.legend=FALSE) +
   geom_ribbon(aes(x = date,
@@ -458,19 +465,14 @@ subset %>%
   scale_y_continuous(labels = comma) +
   scale_x_date(date_breaks = "3.5 months", 
                date_labels = "%b %Y") +
-  theme_c(axis.text.x=element_text(size=5),
+  theme_c(axis.text.x=element_text(size=7),
           axis.text.y = element_text(size=4.5),
           legend.position = "top",
           legend.text=element_text(size=12),
-          strip.text.x=element_text(size=8,
+          strip.text.x=element_text(size=11,
                                     face='plain',
                                     color='white')) +
-  scale_fill_manual(values =pal,
-                    labels = TeX(names(pal)),
-                    name=''
-                    #,
-                  # , breaks="Covidestim"
-                    )  +
+  scale_fill_manual(values =comp_state_pal, name='')  +
   labs(y = "Estimated Infections",
        title = paste0("Estimated Infections by State")) +
   guides(color = guide_legend(override.aes = list(linewidth =2),
@@ -480,11 +482,13 @@ subset %>%
 
 
 
+
 ```
 
-```{r,eval=save_figures, fig.height=14, fig.width=9}
+```{r,eval=save_figures, fig.height=14, fig.width=12}
 
 ggsave(here('figures/intervals-and-covidestim-all-states.pdf'))
+
 
 ```
 
@@ -495,7 +499,7 @@ ggsave(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 ```{r, fig.height=10,fig.width=12}
 
-subset %>%
+subset %>% 
    ggplot() +
   geom_ribbon(aes(x = date, 
              ymin = exp_cases_lb/positive,
@@ -538,6 +542,15 @@ ggsave(here('figures/ratio-estimated-to-observed-all-states.pdf'))
 
 ```{r, fig.height=9,fig.width=8}
 
+
+max_val <- subset %>% 
+  # left_join(codes) %>%
+  filter(biweek %in% c(7, 13,27)) %>%
+  mutate(ratio=exp_cases_ub/positive) %>%
+  pull(ratio) %>%
+  max()
+  
+  
 plt1 <- subset %>% 
   # left_join(codes) %>%
   filter(biweek == 7) %>%
@@ -556,7 +569,7 @@ plt1 <- subset %>%
   labs(y="", x="Ratio of Estimated Infections\nto Observed",
        title ="During Two-week Period\nin the Alpha Wave",
        subtitle = "March 26, 2021 through April 8, 2021") +
-  xlim(0,65)
+  xlim(0,max_val+2)
 
 plt1
 
@@ -600,7 +613,7 @@ plt2 <- subset %>%
   labs(y="", x="Ratio of Estimated Infections\nto Observed",
        title ="During Two-week Period\nin the Delta Wave",
        subtitle = "June 18, 2021 through July 1, 2021") +
-  xlim(0,65)
+  xlim(0,max_val+2)
 
 plt2
 
@@ -641,7 +654,7 @@ plt3 <- subset %>%
   labs(y="", x="Ratio of Estimated Infections\nto Observed",
        title ="During Two-week Period\nin the Omicron Wave",
        subtitle = "December 31, 2021 through January 14, 2022") +
-  xlim(0,65)
+  xlim(0,max_val+2)
 
 plt3
 
@@ -653,6 +666,7 @@ plt3
 ## All Waves Together
 
 ```{r, fig.height=10, fig.width=17}
+
 
 plt <- plot_grid(plt1,plt2, plt3, nrow=1, align="none", labels="auto", label_size=19)
 
@@ -669,11 +683,27 @@ plot_grid(title, plt, nrow=2,
 
 ```{r,eval=save_figures, fig.height=10, fig.width=17}
 
+
 ggsave(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
 
 
 
 ```
+
+```{r}
+
+cat("Time interval with the highest ratio of estimated cases to observed: ")
+
+subset %>%
+  group_by(biweek) %>%
+  mutate(ratio=exp_cases_median/positive) %>%
+  summarize(mean_ratio=mean(ratio),
+         date = paste(range(date),collapse=" to ")) %>%
+  slice_max(n=1, order_by=mean_ratio)
+
+
+```
+
 
 ```{r}
 
@@ -887,6 +917,40 @@ r %>%
 ```
 
 
+
+# Summer Testing Rate
+
+```{r}
+
+subset %>% 
+  mutate(testrate = total/population) %>%
+  group_by(biweek) %>% 
+  mutate(m = median(testrate),
+            date=min(date)) %>%
+  ggplot(aes(x=date,y=testrate, group=state)) +
+  geom_line(alpha=.2) +
+  geom_line(aes(y=m, color='Median'), size=2) +
+  labs(y = "Total Number of Tests\nOver Population Size",
+       title ="Testing Rate Over Time",
+       x="") +
+  theme_c() +
+  theme(axis.title.x = element_text(size=16),
+          axis.title.y  = element_text(size=16),
+        legend.position='top') +
+  geom_vline(xintercept = ymd("2021-07-16"), linetype = 2, linewidth=.5) +
+  geom_vline(xintercept = ymd("2021-06-18"), linetype = 2, linewidth=.5) +
+  scale_x_date(date_breaks="2 months",
+               date_labels = "%b %Y") +
+  scale_color_manual(values=c(Median="darkred"),name='')
+
+
+ggsave(here('figures/testrate-low-summer.pdf'), height=6,width=12, dpi=400)
+
+
+
+```
+
+
 ```{r,eval=FALSE, include=FALSE}
 
 dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
@@ -930,3 +994,94 @@ v7_1 %>%
 
 
 ```
+
+
+
+# Variant Data
+
+
+```{r, fig.heihgt=7}
+
+
+
+m <- state_res %>%
+  filter(state == "MI" & version=="v7") %>%
+  pull(exp_cases_ub) %>%
+  max()
+
+
+variant <- tar_read(variant, store =targets_dir)
+
+varpal <- c("#7BD8DA","#709f0f", "#e71761", "#9245c8", 
+            "#97481c", "#5054b1", "#DA7BA8", "#26B392")
+
+state_res %>%
+  filter(state == "MI" & version %in% c("v7")) %>%
+ # filter(state %in% sample(corrected$state,5)) %>%
+  filter(biweek >=6) %>%
+  group_by(biweek) %>%
+  mutate(xmin = min(date),
+         xmax = max(date)) %>%
+  ungroup() %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub),
+             fill = "#3E3D3D",
+             alpha = .5,
+             show.legend=FALSE) +
+  # geom_ribbon(aes(x = date,
+  #                 fill = 'Covidestim',
+  #                 ymin = infections.lo,
+  #                 ymax = infections.hi),
+  #             alpha = .5) +
+  # facet_grid(~vlabel, scales = "free_y",
+  #             labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+  scale_x_date(date_breaks = "2 months", 
+               date_labels = "%b %Y") +
+  theme_c(legend.position="top") +
+  # theme_c(axis.text.x = element_text(size = 16),
+  #         axis.title.y = element_text(size=13),
+  #         plot.title=element_text(face = "bold",
+  #                                 hjust = .5, 
+  #                                 size = 24,
+  #                                 margin=margin(5,5,15,5,'pt')),
+  #         strip.background = element_rect(fill = "#393939"),
+  #         strip.text = element_text(color =  "white", size = 16),
+  #         strip.text.y = element_text(margin = margin(5,5,5,5,'pt'),
+  #                                     size = 22,
+  #                                     face="bold"),
+  #         strip.text.x =  element_text(margin = margin(5,3,5,3,'pt'),
+  #                                      face = "bold",
+  #                                      size = 22),
+  #         plot.subtitle = ggtext::element_markdown(size = 25,margin = margin(3,5,10,5,'pt'),
+  #                                      face = "italic"),
+  #         legend.position = "top",
+  #         legend.text =element_text(size = 17),
+  #         legend.title = element_text(size=18, face="bold")) +
+  geom_line(aes(x=week, y=share*m,
+                color =variant_category,
+                group=variant_category),
+            data=variant,
+            linewidth=1.3) +
+  # scale_fill_manual(values =pal,
+  #                   labels = TeX(names(pal)),
+  #                    breaks='Covidestim',
+  #                   name='')  +
+  scale_y_continuous(sec.axis = sec_axis( trans=~./m, name="Variant Proportion"),
+                     labels = comma) +
+  labs(y = "Estimated Infections",
+       title = paste0("Estimated Infections by Version in Michigan"),
+       color = "SARS-CoV-2 Variant",
+       x="Date") +
+  guides(color = guide_legend(override.aes = list(linewidth =3),
+                              ncol=2,title.position="top")) +
+ # scale_color_brewer(palette="Accent") 
+  scale_color_manual(values=varpal)
+
+
+
+ggsave(here('figures/michigan_variant.pdf'), dpi=400)
+
+```
+

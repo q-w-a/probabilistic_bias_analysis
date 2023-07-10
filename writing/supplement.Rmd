@@ -1,5 +1,5 @@
 ---
-title: "Supplement"
+title: "Supplementary Materials"
 author: "Quinn White"
 date: "`r Sys.Date()`"
 output:
@@ -56,13 +56,39 @@ include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 
 
+# Testing Rate (2021-06-18 - 2021-07-01) 
+
+```{r testrate-low-summer, fig.cap="Testing rate, calculated as the etotal number of tests for a 2-week interval in a state over the census population in that state, over time. The median across states for each two-week interval is shown in red. In relation to Figure 1 in the main text, where we see that the period with the highest ratio of estimated to observed infections is June 18, 2021 through July 1, 2021, we see here that testing rates across states are at a minimum during this time period."}
+
+include_graphics(here('figures/testrate-low-summer.pdf'))
+
+```
 
 ## COVID-19 Trends and Impact Survey 
 
+```{r, fig.cap="The ratio of the screening test positivity over the overall test positivity from the COVID-19 Trends and Impact Survey is taken to be the estimate of $\\beta$. Because of the noise present inthe data, we use the spline smoothed values to inform the priors. More specifically, we use cubic spline smoothing with 2 knots (July 15th, 2021 and December 1st, 2021). While there are estimates of $\\Pr(S_1|\\text{untested})$ for all states (seen in the following figure), there are 27 states with estimates of $\\beta$.", fig.width=14,fig.height=12}
+include_graphics(here('figures/smoothing-beta.pdf'))
+```
+
+
+```{r,fig.cap="The percentage of the population experiencing COVID-19-like illness is taken to be the estimate of $\\Pr(S_1|\\text{untested})$. The LOESS smoothed estimate with a span of 0.2 is shown in red. Survey data on this variable is available for all states.", fig.width=14,fig.height=12}
+
+include_graphics(here('figures/smoothing-s-untested.pdf'))
+
+
+```
 
 
 # County Results by Implementation
 
 
 
+# Variant Data
+
+```{r michigan-variant, fig.cap = "Simulation intervals for Michigan along with the variant proportions for variants designated as *Variant of Interest* or *Variant of Concern* by the World Health Organization. These variant proportions are not specific to Michigan; the estimates are for the United States. The rise in Omicron corresponds to the dramatic increase in both the probabilistic bias intervals and Covidestim estimates in December of 2021 through January of 2022. We also see the increase in the Delta variant that precedes the Delta wave in the summer of 2021."}
+
+include_graphics(here('figures/michigan_variant.pdf'))
+
+
+```
 

@@ -302,7 +302,8 @@ w_data %>%
              ncol=2,
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
-  theme_c() +
+  theme_c(axis.title = element_text(size=15),
+          strip.text=element_text(size=15, color='white', margin=margin(2,0,2,0))) +
   labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "Correlations Between Probabilistic Bias Infections\nand Mean Wastewater Concentration")
@@ -326,8 +327,9 @@ plt_wastewater_pb <- w_data %>%
              ncol=1,
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
-  theme_c() +
-  theme(strip.text.x = element_text(size=12)) +
+  theme_c(axis.title = element_text(size=15),
+          strip.text=element_text(size=15, color='white',margin=margin(2,0,2,0))) +
+ # theme(strip.text.x = element_text(size=12)) +
   labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Mean Wastewater Concentration\n(Standardized by County)",
        title = "Correlations with Wastewater Concentrations")
@@ -370,8 +372,9 @@ plt_covidestim_pb <- w_data %>%
               ncol=1,
              labeller= as_labeller(TeX, 
                                    default = label_parsed)) +
-  theme_c() +
-  theme(strip.text.x = element_text(size=12)) +
+ theme_c(axis.title = element_text(size=15),
+          strip.text=element_text(size=15, color='white',margin=margin(2,0,2,0))) +
+ # theme(strip.text.x = element_text(size=12)) +
   labs(x = "Probabilistic Bias Infections\n(Standardized by County)",
        y = "Covidestim Estimates\n(Standardized by County)",
        title = "Correlations with Covidestim Infections")
@@ -389,7 +392,6 @@ plt_covidestim_pb
 
 cowplot::plot_grid(plt_wastewater_pb, plt_covidestim_pb, ncol=2,  labels="auto", label_size=19)
 
-
 ```
 
 
@@ -397,6 +399,7 @@ cowplot::plot_grid(plt_wastewater_pb, plt_covidestim_pb, ncol=2,  labels="auto",
 
 
 ggsave(here("figures/correlations-wastewater-by-version.pdf"))
+
 
 
 ```
@@ -1802,6 +1805,15 @@ ggsave(here('figures/simulation-intervals-color-version-county.pdf'))
 
 ```{r}
 
+cat("Maximum ratio, on average, occured: ")
+county %>% 
+  filter(version=="v7") %>% 
+  group_by(biweek) %>% 
+  summarize(m = mean(exp_cases_median/positive),dates=paste(range(date),collapse=",")) %>%
+  slice_max(n=1, m) 
+
+
+
 ######################################################
 # HEATMAP OF RATIO OF ESTIMATED TO OBSERVED
 ######################################################
@@ -1882,7 +1894,7 @@ county %>%
   theme(strip.text.x = element_text(size=11, color="white")) +
   scale_y_continuous(n.breaks=10) +
   geom_hline(yintercept=1, linetype=2,color="darkred", alpha=.8, linewidth=.5) +
-  labs(y = "Ratio of Estimated Infections to Observed Infections",
+  labs(y = "Ratio of Estimated Infections\nto Observed Infections",
        x = "Testing Rate",
        subtitle = "All Time Intervals for Counties in Massachusetts",
        title = "Relationship Between Testing Rate and\nRatio of Estimated Infections to Observed Infections")+
