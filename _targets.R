@@ -5,6 +5,7 @@
 
 # Load packages required to define the pipeline:
 library(targets)
+library(crew)
 # library(tarchetypes) # Load other packages as needed. # nolint
 
 # Set target options:
@@ -12,12 +13,13 @@ tar_option_set(
   # packages needed for targets
   packages = c("tidyverse", "lubridate", 
                "here", "httr", "imputeTS"), 
+  controller=crew_controller_local(workers=4),
   format = "rds" # default storage format
   # Set other options as needed.
 )
 
 # tar_make_clustermq() configuration (okay to leave alone):
-options(clustermq.scheduler = "multicore")
+# options(clustermq.scheduler = "multicore")
 
 # Run the R scripts in the R/ folder with your custom functions:
 #tar_source("R/priors.R")
