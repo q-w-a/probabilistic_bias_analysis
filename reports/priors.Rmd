@@ -156,6 +156,27 @@ tibble(x = seq(0, 1, length = 10^(5)),
 
 
 
+tibble(x = seq(0, 1, length = 10^(5)),
+       y = with(prior_params, beta_density(x,
+                                     mean = s_untested_mean,
+                                     sd = s_untested_sd,
+                                     bounds = s_untested_bounds))) %>%
+   ggplot(aes(x=x, y = y)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0,ymax=y),
+              fill="black",
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $P(S_1|untested)$"),
+       fill ='',
+       subtitle = paste0("Mean: ", prior_params$s_untested_mean,
+                         ", SD: ", prior_params$s_untested_sd))
+
+
 ```
 
 
@@ -186,8 +207,46 @@ tibble(x = seq(0, 1, length = 10^(5)),
                          ", SD: ", prior_params$p_s0_pos_sd))
 
 
+tibble(x = seq(0, 1, length = 10^(5)),
+       y = with(prior_params, beta_density(x,
+                                     mean = .55,
+                                     sd = .12,
+                                     bounds = NA))) %>%
+   ggplot(aes(x=x, y = y)) +
+  geom_line(alpha = .8) + 
+  geom_ribbon(aes(x=x,ymin=0,ymax=y),
+              fill="black",
+              alpha=.6) +
+  theme_c(legend.text=element_text(size = 10)) +
+  viridis::scale_fill_viridis(discrete=TRUE,
+                             option = "rocket", begin=.3,end=.8) +
+  labs(x = "Value",
+       y = "Probability Density", 
+       title = latex2exp::TeX("Definition of Prior for $P(S_0|test_+,untested)$"),
+       fill ='',
+       subtitle = paste0("Mean: ", .55,
+                         ", SD: ", .12)) +
+  scale_x_continuous(n.breaks=11)
 
 
+
+tibble(samp =sample_beta_density(1e4, mean = .55,
+                                     sd = .12,
+                                     bounds = NA))
+
+
+qbeta(.025, shape1= get_beta_params( mu = .55,
+                                     sd = .12)$a,
+      shape2= get_beta_params( mu = .55,
+                                     sd = .12)$b
+      )
+
+
+qbeta(.975, shape1= get_beta_params( mu = .55,
+                                     sd = .12)$a,
+      shape2= get_beta_params( mu = .55,
+                                     sd = .12)$b
+      )
 
 ```
 
@@ -573,4 +632,206 @@ ctis_smoothed %>%
 
 
 ```
+
+
+
+# Bayesian Melding
+
+
+```{r}
+
+library(patchwork)
+library(truncdist)
+
+source(here('R/04-melding.R'))
+
+params <- prior_params
+params$beta_shape1 <- beta_shape[1]
+params$beta_shape2 <- beta_shape[2]
+params$s_untested_shape1 <- s_untested_shape[1]
+params$s_untested_shape2 <- s_untested_shape[2]
+params$direct_params <- TRUE
+# 
+# prior_params <- list(
+#     alpha_mean = .95,
+#     alpha_sd = 0.08,
+#     alpha_bounds = NA,
+#    # alpha_bounds = c(.8,1),
+#     beta_mean = .15,
+#     beta_sd =.09,
+#     beta_bounds = NA,
+#   #  beta_bounds = c(0.002, 0.4),
+#     s_untested_mean = .03,
+#     s_untested_sd = .0225,
+#   #  s_untested_bounds = c(0.0018, Inf),
+#     s_untested_bounds = NA,
+#     p_s0_pos_mean = .4,
+#     p_s0_pos_sd = .1225,
+#  #  p_s0_pos_bounds = NA,
+#     p_s0_pos_bounds = c(.25, .7),
+#     pre_nsamp = 1e4,
+#     post_nsamp = 1e4)
+
+
+
+
+
+melded <- do.call(get_melded, prior_params)
+
+
+
+theta_wide <- with(prior_params,  
+ theta <- tibble(x= seq(0,1.4, length = 200),
+                 alpha = gamma_density(x,
+                                       mean = alpha_mean,
+                                       sd = alpha_sd,
+                                       bounds = alpha_bounds),
+                    # beta= beta_density(x,
+                    #                           mean = beta_mean,
+                    #                           sd = beta_sd,
+                    #                           bounds = beta_bounds),
+                    # P_S_untested = beta_density(x,
+                    #                             mean = s_untested_mean,
+                    #                             sd = s_untested_sd,
+                    #                             bounds = s_untested_bounds),
+                 P_S0_pos = beta_density(x,
+                                         mean = p_s0_pos_mean,
+                                         sd = p_s0_pos_sd,
+                                         bounds = p_s0_pos_bounds)
+                 )) %>%
+  mutate(beta = dbeta(x, shape1= beta_shape[1], shape2=beta_shape[2]),
+         P_S_untested = dbeta(x, shape1=s_untested_shape[1],
+                              shape2=s_untested_shape[2] ))
+ 
+
+
+theta_samp<- with(prior_params,  
+ theta <- tibble(alpha = sample_gamma_density(pre_nsamp,
+                                                mean = alpha_mean,
+                                                sd = alpha_sd,
+                                                bounds = alpha_bounds),
+                    beta= rbeta(pre_nsamp,
+                                shape1= beta_shape[1], 
+                                shape2=beta_shape[2]),
+                    P_S_untested = rbeta(pre_nsamp,
+                                         shape1=s_untested_shape[1],
+                                         shape2=s_untested_shape[2])) %>%
+        mutate(phi_induced = est_P_A_testpos(P_S_untested = P_S_untested,
+                                             alpha = alpha,
+                                             beta=beta))) %>%
+  select(phi_induced)
+
+
+
+theta <- theta_wide %>% 
+  pivot_longer(-c(x)) %>%
+    mutate(name = case_when(
+      name == "alpha" ~"$\\alpha$",
+      name == "beta" ~"$\\beta$",
+      name == "phi_induced" ~ "$M(\\theta) = Pr(S_0|test+,untested)$",
+      name == "P_S_untested" ~ "$Pr(S_1|untested)$",
+      name == "P_S0_pos" ~ "$Pr(S_0|test+,untested)$")
+    ) %>%
+    mutate(name = factor(name,
+                         levels = c(
+                           "$\\alpha$",
+                           "$\\beta$",
+                           "$Pr(S_1|untested)$",
+                           "$Pr(S_0|test+,untested)$",
+                           "$M(\\theta) = Pr(S_0|test+,untested)$"))) 
+
+
+```
+
+
+
+
+
+
+
+
+
+```{r, fig.width=9,fig.height=9}
+
+melded_long <- reformat_melded(melded$post_melding,
+                               melded$pre_melding,
+                               pre_nsamp = prior_params$pre_nsamp,
+                              p_s0_pos_mean = prior_params$p_s0_pos_mean,
+                              p_s0_pos_sd = prior_params$p_s0_pos_sd,
+                              p_s0_pos_bounds = c(.3,.7)) %>%
+  filter(type=="After Melding") %>%
+  mutate(name = gsub("$P(S_1|untested)$",
+                     "$Pr(S_1|untested)$", name,fixed=TRUE),
+         name = gsub("$P(S_0|test+,untested)$",
+                     "$Pr(S_0|test+,untested)$", name, fixed=TRUE)) %>%
+    mutate(name = factor(name,
+                         levels = c(
+                           "$\\alpha$",
+                           "$\\beta$",
+                           "$Pr(S_1|untested)$",
+                           "$Pr(S_0|test+,untested)$")))
+
+plt1 <- theta %>% 
+  filter(name != "$M(\\theta) = Pr(S_0|test+,untested)$" & name !=  "$Pr(S_0|test+,untested)$") %>%
+  ggplot() +
+  geom_ribbon(aes(x=x, ymin=0, ymax= value, fill='Before Melding'),alpha=.7, color=NA)+
+  geom_density(aes(x=value, fill = 'After Melding'), 
+               color=NA,
+               data = melded_long[melded_long$name !=
+                                    "$Pr(S_0|test+,untested)$",]) +
+  facet_wrap(~name,
+             labeller=  as_labeller(TeX, default = label_parsed),
+             ncol = 3, scales="free_y") +
+  theme_c()+
+  theme(legend.position="right",
+          axis.text.x=element_text(size=6),
+          axis.title.x=element_text(size=12),
+          axis.title.y=element_text(size=12)) +
+  theme(legend.position="none") +
+  scale_x_continuous(n.breaks=5) +
+  labs(x="Value")+
+scale_fill_manual(values = c("Before Melding"= "#5670BF", "Induced" = "#B28542",
+                                 "After Melding" = "#418F6A"))
+
+
+theta_samp <- theta_samp %>% mutate(name ="$Pr(S_0|test+,untested)$" )
+
+plt2 <- theta %>% 
+  filter(name==  "$Pr(S_0|test+,untested)$") %>%
+  ggplot() +
+  geom_ribbon(aes(x=x, ymin=0, ymax= value, fill='Before Melding'),alpha=.7)+
+  geom_density(aes(x=value, fill = 'After Melding'),
+               alpha=.7,color=NA,
+               data = melded_long[melded_long$name ==
+                                    "$Pr(S_0|test+,untested)$",]) +
+    geom_density(aes(x= phi_induced, fill="Induced"), 
+                 color = NA,
+                 data = theta_samp,
+                 alpha =.7) +
+  facet_wrap(~name,
+             labeller=  as_labeller(TeX, default = label_parsed),
+             ncol = 3, scales="free_y") +
+  theme_c() +
+  theme(legend.position="right",
+          axis.text.x=element_text(size=6),
+          axis.title.x=element_text(size=12),
+          axis.title.y=element_text(size=12))+
+  scale_x_continuous(n.breaks=5, limits =c(0,1)) +
+  labs(x="Value",
+       fill = "")+
+    scale_fill_manual(values = c("Before Melding"= "#5670BF", "Induced" = "#B28542",
+                                 "After Melding" = "#418F6A"))
+
+
+plt1 / plt2
+
+
+ggsave(here('figures/melding-priors.pdf'))
+
+```
+
+
+
+
+
 

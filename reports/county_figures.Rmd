@@ -1900,10 +1900,10 @@ ggsave(here('figures/testing_rate_ratio-county.pdf'), width=11,height=7, dpi=400
 
 ###########################################################################
 # plot relationship between ratio of estimated cases to observed 
-# against testing rate 
+# against testing rate -- colored by county 
 ###########################################################################
 county %>%
-  ggplot(aes(x=total/population, y = exp_cases_median/positive, color=population)) +
+  ggplot(aes(x=total/population, y = exp_cases_median/positive, color=name)) +
   geom_point(alpha=.03, size=.9) +
   geom_linerange(aes(ymin = exp_cases_lb/positive,
                      ymax=exp_cases_ub/positive ),
@@ -1920,6 +1920,34 @@ county %>%
        subtitle = "All Time Intervals and All States",
        title = "Relationship Between Testing Rate and\nRatio of Estimated Infections to Observed Infections")+
   scale_x_continuous( n.breaks=4, limits=c(lb,.3))
+
+
+```
+
+```{r, fig.height=12}
+
+###########################################################################
+# plot relationship between ratio of estimated cases to observed 
+# against testing rate  -- faceted by county 
+###########################################################################
+county %>%
+  ggplot(aes(x=total/population, y = exp_cases_median/positive)) +
+  geom_point(alpha=.03, size=.9) +
+  geom_linerange(aes(ymin = exp_cases_lb/positive,
+                     ymax=exp_cases_ub/positive ),
+                 alpha=.03) +
+  facet_grid(name~vlabel,
+               labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+  theme_c(axis.text.x = element_text(size =9),
+          axis.title = element_text(size=16) ) +
+  theme(strip.text.x = element_text(size=11, color="white")) +
+  scale_y_continuous(n.breaks=10) +
+  geom_hline(yintercept=1, linetype=2,color="darkred", alpha=.8, linewidth=.5) +
+  labs(y = "Ratio of Estimated Infections to Observed Infections",
+       x = "Testing Rate",
+       subtitle = "All Time Intervals and All States",
+       title = "Relationship Between Testing Rate and\nRatio of Estimated Infections to Observed Infections")+
+  scale_x_continuous( n.breaks=4, limits=c(lb-.02,.3))
 
 
 ```
@@ -2026,15 +2054,14 @@ get_coverage <- function(df, geo_scale) {
 }
 
 
-county_coverage <- county_covidestim %>% get_coverage(geo_scale="County")
+county_coverage <- county_covidestim %>% get_coverage(geo_scale="County Level (in Massachusetts)")
 saveRDS(county_coverage, here("figures/table_data/county_coverage.RDS"))
 
-state_coverage <- state_covidestim %>% get_coverage(geo_scale="State")
+state_coverage <- state_covidestim %>% get_coverage(geo_scale="State Level")
 saveRDS(state_coverage, here("figures/table_data/state_coverage.RDS"))
 
 ```
 
-\@ref(table:coverage) is 
 
 ```{r}
 

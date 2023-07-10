@@ -21,7 +21,7 @@ get_melded <- function(alpha_mean = 0.9,
                        beta_shape1=NULL,
                        beta_shape2=NULL,
                        s_untested_shape1=NULL,
-                       s_untested_shape2) {
+                       s_untested_shape2=NULL) {
   
   
   given_args <- as.list(environment())

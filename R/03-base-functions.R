@@ -66,12 +66,8 @@ sample_beta_density <- function(n, mean, sd, bounds = NA) {
     mu = mean,
     sd = sd)
   
-  rbeta(n,
-        shape1 = shape_params$a,
-        shape2 = shape_params$b)
-  
   if(!length(bounds) == 1){
-    # message("here")
+    message(paste("Truncating with bounds: ", paste(bounds,collapse=", ")))
     rtrunc(n,
            spec = "beta",
            a = bounds[1],

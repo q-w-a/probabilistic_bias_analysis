@@ -887,4 +887,47 @@ r %>%
 ```
 
 
+```{r,eval=FALSE, include=FALSE}
+
+dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
+
+v7_1 <- tar_read(ma_v1, store="_targets_7_08") %>%
+  mutate(targets_version="1")
+
+
+v7_2 <- tar_read(ma_v1, store="_targets") %>%
+  mutate(targets_version="2")
+
+
+v7_1 <- tar_read(state_v1, store="_targets_7_08") %>%
+  mutate(targets_version="1")
+
+
+v7_2 <- tar_read(state_v1, store="_targets") %>%
+  mutate(targets_version="2")
+
+
+v7_1 %>%
+  bind_rows(v7_2) %>%
+  filter(fips %in% sample(unique(v7_1$fips),5)) %>%
+  left_join(dates,relationship = "many-to-many" ) %>%
+  ggplot(aes(x=date, 
+             ymin = exp_cases_lb,
+             ymax=exp_cases_ub,
+             fill = targets_version)) +
+  geom_ribbon(alpha=.6) +
+  facet_wrap(~fips,scales="free")
+  
+
+v7_1 %>%
+  bind_rows(v7_2) %>%
+  select(fips, exp_cases_median, biweek, targets_version) %>%
+  pivot_wider(names_from=targets_version,
+              values_from = exp_cases_median,
+              names_prefix="exp_cases_targets_v") %>%
+  mutate(diff =exp_cases_targets_v1 - exp_cases_targets_v2) %>% 
+  summarize(diff =mean(diff))
+
+
+```
 
