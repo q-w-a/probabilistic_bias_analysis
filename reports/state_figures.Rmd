@@ -1043,7 +1043,7 @@ varpal <- c("#7BD8DA","#709f0f", "#e71761", "#9245c8",
 state_res %>%
   filter(state == "MI" & version %in% c("v7")) %>%
  # filter(state %in% sample(corrected$state,5)) %>%
-  filter(biweek >=6) %>%
+ # filter(biweek >=6) %>%
   group_by(biweek) %>%
   mutate(xmin = min(date),
          xmax = max(date)) %>%

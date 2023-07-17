@@ -611,7 +611,7 @@ get_biweekly_wastewater <- function() {
 
 get_variant_proportions <- function() {
   
-  variant <- "https://data.cdc.gov/resource/jr58-6ysp.json?$limit=50000&$where=week_ending between '2021-02-18T00:00:00.000' and '2022-03-01T00:00:00.000'&usa_or_hhsregion=USA"
+  variant <- "https://data.cdc.gov/resource/jr58-6ysp.json?$limit=50000&$where=week_ending between '2021-01-01T00:00:00.000' and '2022-03-01T00:00:00.000'&usa_or_hhsregion=USA"
   variant <- httr::GET(URLencode(variant))
   
   
@@ -641,15 +641,21 @@ get_variant_proportions <- function() {
       grepl("B[.]1[.]617[.]2", variant) ~ "Delta",
       variant %in% c("B.1.427" ,"B.1.429") ~ "Epsilon",
       variant == "B.1.525" ~ "Eta",
-      variant == "Other" ~ "Other"
+      TRUE ~ "Other"
     )) %>%
     mutate(share = as.numeric(share),
            creation_date = ymd(substr(creation_date,1,10))) %>%
-    filter(modeltype == "weighted" & time_interval=="weekly") %>%
+    filter(modeltype == "weighted") %>% 
+    mutate(week_val = ifelse(time_interval=="weekly", 1, 2)) %>%
     group_by(variant, week_end_date, variant_category, time_interval) %>% 
+    # take most recently created
     slice_max(n=1, order_by=creation_date) %>%
+    group_by(variant, week_end_date) %>%
+    slice_min(n=1, week_val ) %>%
+    # take weekly if available, otherwise biweekly 
     group_by(variant_category, week_end_date, time_interval) %>%
     summarize(share =sum(share, na.rm=TRUE))
+  
   
   
   variant <- variant %>%
@@ -658,8 +664,6 @@ get_variant_proportions <- function() {
     # week beginning rather than week end
     mutate(week = week_end_date - days(7)) %>%
     filter(!is.na(variant_category)) 
-  
-
   
   return(variant)
   

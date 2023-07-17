@@ -43,7 +43,7 @@ get_v5_county_corrected|function|f62a361642f82102|||||||||||||||
 get_v6_corrected|function|55160f69356f7ddc|||||||||||||||
 get_v6_county_corrected|function|1e806ce68fd2644d|||||||||||||||
 get_v7_state|function|cd6ac29ea2257d77|||||||||||||||
-get_variant_proportions|function|04d76906f73f5cf0|||||||||||||||
+get_variant_proportions|function|11e34a2b8014edba|||||||||||||||
 logit|function|93c8c5ac7b6f2cbc|||||||||||||||
 ma_biweekly_county|stem|97bd6eca105b75d4|0ebf6337025f21cb|f920532bcd0f8c9a|-1185512336||t19547.9084224176s|ecd5ff6530e51d8b|8135|rds|local|vector|||6.087||
 ma_v1|stem|15815072e51fd8f6|c2fd68901a8878e3|f3c5500affb10644|-236316599||t19547.916625909s|7cd01b464ed83f9d|15533|rds|local|vector|||683.625||
@@ -71,5 +71,5 @@ state_v6|stem|9bff86b97d892e07|befb733c5c0c396c|5574b78d03740471|-1500845846||t1
 state_v7|stem|4501f999f6f6e874|0e53bcdf94c017d9|82d11b4afa832a35|-1799305898||t19548.0948775829s|0da1832dc5959fbe|60453|rds|local|vector|||6017.001|NAInf replaced by maximum positive value. NAInf replaced by maximum positive value|
 summarize_corrected_sample|function|a0cb7c8964ee68db|||||||||||||||
 tests_biweekly_state|stem|b9d6a9b1dcf284ba|2f241e580a396879|fdca40a0be45182e|1602525337||t19547.9084902256s|4c790a9c1b973dc6|40838|rds|local|vector|||8.877||
-variant|stem|9f2a601601dc5777|8a0d40f31c9750a7|a959efb46f3a3804|236001354||t19548.5868469501s|f4ad02f3138c8033|2652|rds|local|vector|||6.89||
+variant|stem|8e192f88a192fa9c|8a0d40f31c9750a7|bb0201c5d992895f|236001354||t19555.9368041125s|afff476e688160e6|2895|rds|local|vector|||10.405||
 waste|stem|6e3e29146007f932|959b19dc0fa72e13|17300d8e8c16af7e|-443262632||t19547.908518882s|2081fc10a45bc22f|30519|rds|local|vector|||2.458||
