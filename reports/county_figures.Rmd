@@ -145,6 +145,40 @@ if(filter_versions) {
 
 ```
 
+
+```{r}
+
+
+convert_labels <- function(labels, to_newlines=TRUE) {
+  
+  if(to_newlines) {
+    gsub("$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+         "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$", 
+         as.character(labels),
+         fixed=TRUE) %>%
+    gsub("$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+         "$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}", 
+         .,
+         fixed=TRUE)
+  }
+  else {
+      gsub(
+         "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$", 
+         "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+         as.character(labels),
+         fixed=TRUE) %>%
+    gsub("$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}",
+         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+         .,
+         fixed=TRUE)
+  }
+  
+}
+
+
+```
+
+
 ```{r}
 
 wjoined <- county %>%
@@ -1698,16 +1732,18 @@ ma_concordance %>%
 
 ```{r, fig.width=15, fig.height=16}
 
+names(pal) <- convert_labels(labels(pal), to_newlines=TRUE)
+
 county %>% 
   mutate(name=gsub("Nantucket and Dukes", "Nantucket\nand Dukes", name)) %>%
   mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
    ggplot() +
   geom_ribbon(aes(x = date, 
              ymin = exp_cases_lb,
-             ymax = exp_cases_ub),
-             alpha = .8,
-             show.legend=FALSE,
-             fill="#596281") +
+             ymax = exp_cases_ub,
+             fill = vlabel),
+             alpha = .7,
+             show.legend=FALSE) +
   facet_grid(name~vlabel, 
              labeller=labeller(vlabel =as_labeller(
                TeX, default=label_parsed)),
@@ -1717,20 +1753,24 @@ county %>%
                date_labels = "%b %Y") +
   theme_c(
           legend.position = "top",
-          ) +
-  theme_c(strip.text.x=element_text(size=13,color='white')) +
+          strip.text.x=element_text(size=13,color='white'),
+              axis.title = element_text(size=17),
+          plot.title = element_text(size=24, hjust = .5, face="bold", 
+                                    margin=margin(2,0,2,0)),
+          plot.subtitle = element_text(size=20, face="italic",
+                                       margin=margin(1,0,5,0))) +
   scale_fill_manual(values = pal)  +
   labs(x="",
        y = "Estimated Infections",
        title = "Simulation Intervals Over Time",
-       subtitle = "Counties in Massachusetts") +
-  guides(color = guide_legend(override.aes = list(linewidth =2)))
+       subtitle = "Counties in Massachusetts") 
 
 
 
 ```
 
 ```{r,fig.width=15, fig.height=16, eval=save_figures}
+
 
 ggsave(here('figures/simulation-intervals-faceted-version-county.pdf'))
 
@@ -1741,8 +1781,8 @@ ggsave(here('figures/simulation-intervals-faceted-version-county.pdf'))
 
 ```{r, fig.height=8, fig.width=14}
 
-
-pal
+# switch labels to version without line breaks for clearer legend
+names(pal) <- convert_labels(labels(pal), to_newlines=FALSE)
 
 county_relab <- county %>%
   mutate(vlabel=case_when(
@@ -1761,14 +1801,13 @@ county_relab <- county %>%
 
 county_relab$vlabel %>% unique()
 
-
 county_relab %>%
    ggplot() +
   geom_ribbon(aes(x = date, 
              ymin = exp_cases_lb,
              ymax = exp_cases_ub,
              fill=vlabel),
-             alpha = .5) +
+             alpha = .7) +
   facet_wrap(~name,
              scales="free_y") +
   scale_y_continuous(labels = comma) +
@@ -1794,6 +1833,7 @@ county_relab %>%
 
 ```{r,fig.height=8, fig.width=14, eval=save_figures}
 
+
 ggsave(here('figures/simulation-intervals-color-version-county.pdf'))
 
 
@@ -1805,13 +1845,17 @@ ggsave(here('figures/simulation-intervals-color-version-county.pdf'))
 
 ```{r}
 
-cat("Maximum ratio, on average, occured: ")
-county %>% 
+max_ratio_date <- county %>% 
   filter(version=="v7") %>% 
   group_by(biweek) %>% 
-  summarize(m = mean(exp_cases_median/positive),dates=paste(range(date),collapse=",")) %>%
+  summarize(m = mean(exp_cases_median/positive),
+            dates=paste(range(date),collapse=" to ")) %>%
   slice_max(n=1, m) 
 
+
+cat("Maximum ratio, on average, occured on interval: ",
+    max_ratio_date$dates, "on biweek", 
+    max_ratio_date$biweek)
 
 
 ######################################################

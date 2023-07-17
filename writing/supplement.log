@@ -1,4 +1,4 @@
-This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.7.10)  10 JUL 2023 10:26
+This is pdfTeX, Version 3.141592653-2.6-1.40.25 (TeX Live 2023) (preloaded format=pdflatex 2023.7.10)  17 JUL 2023 14:02
 entering extended mode
  restricted \write18 enabled.
  %&-line parsing enabled.
@@ -563,30 +563,38 @@ Package pdftex.def Info: ../figures/smoothing-s-untested.pdf  used on input line
 
 LaTeX Warning: Float too large for page by 22.09341pt on input line 144.
 
-<../figures/michigan_variant.pdf, id=91, 577.15625pt x 360.34625pt>
+<../figures/simulation-intervals-faceted-version-county.pdf, id=91, 1083.04625pt x 1155.31625pt>
+File: ../figures/simulation-intervals-faceted-version-county.pdf Graphic file (type pdf)
+<use ../figures/simulation-intervals-faceted-version-county.pdf>
+Package pdftex.def Info: ../figures/simulation-intervals-faceted-version-county.pdf  used on input line 151.
+(pdftex.def)             Requested size: 469.74966pt x 501.09534pt.
+
+LaTeX Warning: Float too large for page by 30.60976pt on input line 153.
+
+<../figures/michigan_variant.pdf, id=92, 577.15625pt x 360.34625pt>
 File: ../figures/michigan_variant.pdf Graphic file (type pdf)
 <use ../figures/michigan_variant.pdf>
-Package pdftex.def Info: ../figures/michigan_variant.pdf  used on input line 154.
+Package pdftex.def Info: ../figures/michigan_variant.pdf  used on input line 160.
 (pdftex.def)             Requested size: 469.77493pt x 293.30295pt.
-[5 <../figures/testrate-low-summer.pdf>] [6 <../figures/smoothing-beta.pdf>] [7 <../figures/smoothing-s-untested.pdf>] [8 <../figures/michigan_variant.pdf>] (./supplement.aux)
+[5 <../figures/testrate-low-summer.pdf>] [6 <../figures/smoothing-beta.pdf>] [7 <../figures/smoothing-s-untested.pdf>] [8 <../figures/simulation-intervals-faceted-version-county.pdf>] [9 <../figures/michigan_variant.pdf>] (./supplement.aux)
  ***********
 LaTeX2e <2023-06-01> patch level 1
 L3 programming layer <2023-06-30>
  ***********
  ) 
 Here is how much of TeX's memory you used:
- 13349 strings out of 477172
- 211379 string characters out of 5811562
+ 13379 strings out of 477172
+ 212111 string characters out of 5811562
  1925244 words of memory out of 5000000
- 34037 multiletter control sequences out of 15000+600000
- 617916 words of font info for 119 fonts, out of 8000000 for 9000
+ 34045 multiletter control sequences out of 15000+600000
+ 618746 words of font info for 129 fonts, out of 8000000 for 9000
  14 hyphenation exceptions out of 8191
- 89i,6n,93p,1007b,472s stack positions out of 10000i,1000n,20000p,200000b,200000s
+ 89i,6n,93p,1665b,472s stack positions out of 10000i,1000n,20000p,200000b,200000s
 </Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx10.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmbx12.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmmi10.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr10.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr12.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr17.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmr7.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmri10.pfb></Users/quinnwhite/Library/TinyTeX/texmf-dist/fonts/type1/public/lm/lmsy10.pfb>
-Output written on supplement.pdf (8 pages, 799752 bytes).
+Output written on supplement.pdf (9 pages, 940477 bytes).
 PDF statistics:
- 234 PDF objects out of 1000 (max. 8388607)
- 187 compressed objects within 2 object streams
- 31 named destinations out of 1000 (max. 500000)
- 32865 words of extra memory for PDF output out of 35830 (max. 10000000)
+ 252 PDF objects out of 1000 (max. 8388607)
+ 201 compressed objects within 3 object streams
+ 33 named destinations out of 1000 (max. 500000)
+ 32870 words of extra memory for PDF output out of 35830 (max. 10000000)
 
