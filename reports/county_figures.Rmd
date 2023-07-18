@@ -80,8 +80,8 @@ theme_c <- function(...){
 pal <- c("red", "#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
 
 names(pal) <- c("Covidestim",
-                '$P(S_1|untested)$ Centered at Survey Value',
-                '$P(S_1|untested)$ and $\\beta$ Centered at Survey Values',
+                '$Pr(S_1|untested)$ Centered at Survey Value',
+                '$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values',
                "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
                "$\\beta$ Centered at Survey Value"
                )
@@ -156,8 +156,8 @@ convert_labels <- function(labels, to_newlines=TRUE) {
          "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$", 
          as.character(labels),
          fixed=TRUE) %>%
-    gsub("$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
-         "$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}", 
+    gsub("$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+         "$\\overset{Pr(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}$", 
          .,
          fixed=TRUE)
   }
@@ -167,8 +167,8 @@ convert_labels <- function(labels, to_newlines=TRUE) {
          "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
          as.character(labels),
          fixed=TRUE) %>%
-    gsub("$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+    gsub("$\\overset{Pr(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}$",
+         "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
          .,
          fixed=TRUE)
   }
@@ -207,19 +207,19 @@ versions <- tibble(
   vlabel = factor(
     c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
     "$\\beta$ Centered at Survey Value",
-    "$P(S_1|untested)$ Centered at Survey Value",
-    "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+    "$Pr(S_1|untested)$ Centered at Survey Value",
+    "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
         "$\\beta$ Centered at Survey Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
+         "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
         "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ),
     levels = c(
         "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
         "$\\beta$ Centered at Survey Value",
-         "$P(S_1|untested)$ Centered at Survey Value",
-        "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+         "$Pr(S_1|untested)$ Centered at Survey Value",
+        "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
         "$\\beta$ Centered at Survey Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
+         "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
         "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
        
     ) )
@@ -236,14 +236,14 @@ if(filter_versions) {
     mutate(vlabel=case_when(
       version == "v7" ~  "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$",
       version == "v5" ~ "$\\beta$ Centered at Survey Value",
-      version =="v6" ~  "$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}",
-      version == "v3" ~ "$P(S_1|untested)$ Centered at Survey Value",
+      version =="v6" ~  "$\\overset{Pr(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}$",
+      version == "v3" ~ "$Pr(S_1|untested)$ Centered at Survey Value",
     )) %>%
     mutate(vlabel =factor(vlabel,levels= c(
         "$\\overset{Priors\\,Do\\,Not\\,Vary}{\\,by\\,State\\,and\\,Date}$", 
-         "$P(S_1|untested)$ Centered at Survey Value",
+         "$Pr(S_1|untested)$ Centered at Survey Value",
          "$\\beta$ Centered at Survey Value",
-        "$\\overset{P(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}"))) %>%
+        "$\\overset{Pr(S_1|untested)\\,and\\,beta}{Centered\\,at\\,Survey\\,Values}$"))) %>%
     left_join(county_names) %>%
     mutate(name = ifelse(fips =="25007,25019", "Nantucket and Dukes", name)) %>%
     left_join(dates,  relationship = "many-to-many") %>%
@@ -258,8 +258,8 @@ if(filter_versions) {
     mutate(vlabel=case_when(
       version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
       version == "v5" ~ "$\\beta$ Centered at Survey Value",
-      version =="v6" ~  "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
-      version == "v3" ~ "$P(S_1|untested)$ Centered at Survey Value"
+      version =="v6" ~  "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+      version == "v3" ~ "$Pr(S_1|untested)$ Centered at Survey Value"
     ))
 
 
@@ -520,8 +520,8 @@ library(scales)
 pal <- c("#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
 
 names(pal) <- c(#"$observed$", 
-                '$P(S_1|untested)$ Centered at Survey Value',
-                "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+                '$Pr(S_1|untested)$ Centered at Survey Value',
+                "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
                "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
                "$\\beta$ Centered at Survey Value"
                )
@@ -943,8 +943,8 @@ library(scales)
 pal <- c("#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
 
 names(pal) <- c(#"$observed$", 
-                '$P(S_1|untested)$ Centered at Survey Value',
-                '$P(S_1|untested)$ and $\\beta$ Centered at Survey Values',
+                '$Pr(S_1|untested)$ Centered at Survey Value',
+                '$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values',
                "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
                "$\\beta$ Centered at Survey Value"
                )
@@ -1608,7 +1608,7 @@ ma_concordance_by_county <- wjoined %>%
 # stacked bar chart of concordance by county
 ##############################################
 ma_concordance_by_county %>%
-  filter(vlabel=="$P(S_1|untested)$ Centered at Survey Value") %>%
+  filter(vlabel=="$Pr(S_1|untested)$ Centered at Survey Value") %>%
   group_by(name) %>%
   mutate(m = prop[which(in_interval=="In Interval")]) %>%
   ungroup() %>%
@@ -1626,7 +1626,7 @@ ma_concordance_by_county %>%
        y= "Proportion",
        fill = "Covidestim Median:",
        title = "Massachusetts: Proportion Where Covidestim Median\nWas Within, Above, or Below the Median",
-       subtitle = TeX("For Implementation with $P(S_1|untested)$ Centered at Survey Value")) +
+       subtitle = TeX("For Implementation with $Pr(S_1|untested)$ Centered at Survey Value")) +
   theme_c() +
   theme(legend.position="right",
           legend.title = element_text(face="bold", size = 15),
@@ -1735,6 +1735,8 @@ ma_concordance %>%
 names(pal) <- convert_labels(labels(pal), to_newlines=TRUE)
 
 county %>% 
+  # only include dates where there were estimates for all implementations 
+  filter(biweek >=6) %>%
   mutate(name=gsub("Nantucket and Dukes", "Nantucket\nand Dukes", name)) %>%
   mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
    ggplot() +
@@ -1779,6 +1781,106 @@ ggsave(here('figures/simulation-intervals-faceted-version-county.pdf'))
 
 ## Fill by Version
 
+```{r,results='asis'}
+
+version_with_max <- function(variable) {
+   county %>%
+    mutate(vlabel = convert_labels(vlabel, to_newlines=FALSE)) %>%
+    select(-date) %>%
+    distinct() %>% 
+    # only include biweeks where all implementations have estimates
+    filter(biweek >=6) %>%
+    group_by(biweek,fips) %>%
+    slice_max(n=1,order_by=!!sym(variable), with_ties=FALSE) %>%
+    group_by(vlabel) %>%
+    summarize(n=n()) %>%
+    ungroup() %>%
+    mutate(total=sum(n),
+           prop=n/total)
+}
+
+
+version_with_min <- function(variable) {
+   county %>%
+    mutate(vlabel = convert_labels(vlabel, to_newlines=FALSE)) %>%
+    select(-date) %>%
+    distinct() %>% 
+    # only include biweeks where all implementations have estimates
+    filter(biweek >=6) %>%
+    group_by(biweek,  fips) %>%
+    slice_min(n=1,order_by=!!sym(variable), with_ties=FALSE) %>%
+    group_by(vlabel) %>%
+    summarize(n=n()) %>%
+    ungroup() %>%
+    mutate(total=sum(n),
+           prop=n/total) 
+}
+
+# 
+# county %>%
+#     select(-date) %>%
+#     distinct() %>% 
+#     # only include biweeks where all implementations have estimates
+#     filter(biweek >=6) %>%
+#     group_by(biweek,fips) %>%
+#    # slice_min(n=1,order_by=!!sym(variable), with_ties=FALSE)  %>%
+#   select(exp_cases_lb, biweek, fips,version) %>%
+#   pivot_wider(values_from = exp_cases_lb, names_from=version ) %>%
+#   mutate(diff=v3-v7) %>%
+#   pull(diff) %>%
+#   mean()
+
+
+version_with_max_median <- version_with_max("exp_cases_median")
+version_with_min_median <- version_with_min("exp_cases_median")
+
+
+
+version_with_max_lb <- version_with_max("exp_cases_lb")
+version_with_min_lb <- version_with_min("exp_cases_lb")
+
+
+version_with_max_ub <- version_with_max("exp_cases_ub")
+version_with_min_ub <- version_with_min("exp_cases_ub")
+
+
+#############
+# MEDIAN
+#############
+cat("* The implementatation that most frequently had the maximum median cases across the two-week intervals was",
+    as.character(version_with_max_median$vlabel[which.max(version_with_max_median$prop)]), 
+    "where the median of", 
+    version_with_max_median$prop[which.max(version_with_max_median$prop)] *100 %>% round(3),
+    "percent of simulation intervals was highest.")
+
+cat("* The implementatation that most frequently had the minimum median cases across the two-week intervals was",
+    as.character(version_with_min_median$vlabel[which.max(version_with_min_median$prop)]), 
+    "where the median of", 
+    version_with_min_median$prop[which.max(version_with_min_median$prop)] *100 %>% round(3),
+    "percent of simulation intervals was lowest.")
+
+
+#################
+# LOWER QUANTILE
+#################
+
+cat("* The implementatation that most frequently had the maximum 2.7% percentile in infections across the two-week intervals was",
+    as.character(version_with_max_lb$vlabel[which.max(version_with_max_lb$prop)]), 
+    "where the median of", 
+    version_with_max_lb$prop[which.max(version_with_max_lb$prop)] *100 %>% round(3),
+    "percent of simulation intervals was highest.")
+
+
+cat("* The implementatation that most frequently had the minimum 97.5% percentile in infections across the two-week intervals was",
+    as.character(version_with_min_lb$vlabel[which.max(version_with_min_lb$prop)]), 
+    "where the median of", 
+    version_with_min_lb$prop[which.max(version_with_min_lb$prop)] *100 %>% round(3),
+    "percent of simulation intervals was lowest.")
+
+```
+
+
+
 ```{r, fig.height=8, fig.width=14}
 
 # switch labels to version without line breaks for clearer legend
@@ -1788,14 +1890,14 @@ county_relab <- county %>%
   mutate(vlabel=case_when(
       version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
       version == "v5" ~ "$\\beta$ Centered at Survey Value",
-      version =="v6" ~  "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
-      version == "v3" ~ "$P(S_1|untested)$ Centered at Survey Value",
+      version =="v6" ~  "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+      version == "v3" ~ "$Pr(S_1|untested)$ Centered at Survey Value",
     )) %>%
     mutate(vlabel =factor(vlabel,levels= c(
         "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
-         "$P(S_1|untested)$ Centered at Survey Value",
+         "$Pr(S_1|untested)$ Centered at Survey Value",
          "$\\beta$ Centered at Survey Value",
-       "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values"))) %>%
+       "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values"))) %>%
     mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
   filter(biweek>=6) 
 
@@ -1835,6 +1937,79 @@ county_relab %>%
 
 
 ggsave(here('figures/simulation-intervals-color-version-county.pdf'))
+
+
+```
+
+```{r}
+
+# only two implementations included
+
+versions_to_include <- c(version_with_max_median$vlabel[which.max(version_with_max_median$prop)],
+                         version_with_min_median$vlabel[which.max(version_with_min_median$prop)]) %>%
+  unlist() %>% as.character()
+
+versions_to_include
+
+# switch labels to version without line breaks for clearer legend
+# names(pal) <- convert_labels(labels(pal), to_newlines=FALSE)
+names(pal)
+
+
+
+
+county_relab <- county %>%
+  mutate(vlabel=convert_labels(vlabel, to_newlines=FALSE)) %>%
+  filter(vlabel %in% versions_to_include) %>%
+  mutate(vlabel=case_when(
+      version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+      version == "v5" ~ "$\\beta$ Centered at Survey Value",
+      version =="v6" ~  "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+      version == "v3" ~ "$Pr(S_1|untested)$ Centered at Survey Value",
+    )) %>%
+    mutate(vlabel =factor(vlabel,levels= c(
+        "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
+         "$Pr(S_1|untested)$ Centered at Survey Value",
+         "$\\beta$ Centered at Survey Value",
+       "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values"))) %>%
+    mutate(vlabel=fct_reorder(vlabel,as.numeric(vlabel),.desc=TRUE)) %>%
+  filter(biweek>=6) 
+
+county_relab$vlabel %>% unique()
+
+county_relab %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub,
+             fill=vlabel),
+             alpha = .7) +
+  facet_wrap(~name,
+             scales="free_y") +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3 months", 
+               date_labels = "%b %Y") +
+  theme_c(
+          legend.position = "top",
+          legend.text=element_text(hjust=0)
+          ) +
+  scale_fill_manual(values = pal,
+                    labels=TeX(unique(as.character(county_relab$vlabel))))  +
+  labs(x="",
+       fill="",
+       y = "Estimated Infections",
+       title = "Simulation Intervals Over Time",
+       subtitle = "Counties in Massachusetts") +
+  guides(fill=guide_legend(nrow=2))
+
+```
+
+
+
+```{r,fig.height=8, fig.width=14, eval=save_figures}
+
+
+ggsave(here('figures/simulation-intervals-color-version-only-2-county.pdf'))
 
 
 ```
@@ -2018,14 +2193,14 @@ county %>%
 versions <- tibble(
   version = c( "v3", "v5", "v6", "v7"),
   vlabel = factor(
-    c(  "$P(S_1|$untested) Centered at Survey Value"  ,
+    c(  "$Pr(S_1|$untested) Centered at Survey Value"  ,
     "$\\beta$ Centered at Survey Value",
-    "$P(S_1|$untested) and $\\beta$ Centered at Survey Values",
+    "$Pr(S_1|$untested) and $\\beta$ Centered at Survey Values",
      "Priors Do Not Vary by State or Date"
     ),
-    levels =   c(  "$P(S_1|$untested) Centered at Survey Value"  ,
+    levels =   c(  "$Pr(S_1|$untested) Centered at Survey Value"  ,
     "$\\beta$ Centered at Survey Value",
-    "$P(S_1|$untested) and $\\beta$ Centered at Survey Values",
+    "$Pr(S_1|$untested) and $\\beta$ Centered at Survey Values",
      "Priors Do Not Vary by State or Date"
     ))
 )

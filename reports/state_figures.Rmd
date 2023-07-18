@@ -34,11 +34,15 @@ save_figures <- TRUE
 pal <- c("red", "#10BAC5", "#1B10C5", "#EFB719", "#900C3F")
 
 names(pal) <- c("Covidestim",
-                '$P(S_1|untested)$ Centered at Survey Value',
-                '$P(S_1|untested)$ and $\\beta$ Centered at Survey Values',
+                '$Pr(S_1|untested)$ Centered at Survey Value',
+                '$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values',
                "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
                "$\\beta$ Centered at Survey Value"
                )
+
+
+
+
 
 ```
 
@@ -51,19 +55,19 @@ versions <- tibble(
   vlabel = factor(
     c( "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
     "$\\beta$ Centered at Survey Value",
-    "$P(S_1|untested)$ Centered at Survey Value",
-    "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+    "$Pr(S_1|untested)$ Centered at Survey Value",
+    "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
         "$\\beta$ Centered at Survey Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
+         "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
         "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ),
     levels = c(
         "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$", 
         "$\\beta$ Centered at Survey Value",
-         "$P(S_1|untested)$ Centered at Survey Value",
-        "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+         "$Pr(S_1|untested)$ Centered at Survey Value",
+        "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
         "$\\beta$ Centered at Survey Value (Spline Smoothed)",
-         "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
+         "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values ($\\beta$ Spline Smoothed)",
         "$\\,$CTIS Priors that Do Not Vary by State or Date$\\,$"
     ) )
 )
@@ -105,6 +109,9 @@ covidestim <- tar_read(covidestim_biweekly_state,
 dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
 codes <- read_csv(here('data/demographic/statecodes.csv'))
 
+dates %>% 
+  group_by(biweek) %>%
+  summarize(mindate=min(date),maxdate=max(date)) 
 
 
 state_res <- state_res %>%
@@ -126,8 +133,8 @@ if(filter_versions){
     mutate(vlabel=case_when(
       version == "v7" ~  "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
       version == "v5" ~ "$\\beta$ Centered at Survey Value",
-      version =="v6" ~  "$P(S_1|untested)$ and $\\beta$ Centered at Survey Values",
-      version == "v3" ~ "$P(S_1|untested)$ Centered at Survey Value"
+      version =="v6" ~  "$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values",
+      version == "v3" ~ "$Pr(S_1|untested)$ Centered at Survey Value"
     ))
 
 }
