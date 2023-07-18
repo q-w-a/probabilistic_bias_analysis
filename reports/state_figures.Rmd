@@ -109,9 +109,18 @@ covidestim <- tar_read(covidestim_biweekly_state,
 dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
 codes <- read_csv(here('data/demographic/statecodes.csv'))
 
-dates %>% 
+# last biweek for first model is biweek 24
+last_biweek_old_model <- dates %>% 
   group_by(biweek) %>%
-  summarize(mindate=min(date),maxdate=max(date)) 
+  summarize(mindate=min(date),maxdate=max(date))  %>%
+  filter("2021-11-30" >= mindate & "2021-11-30" <= maxdate)
+
+
+cat("Last two week interval with previous model was biweek", last_biweek_old_model$biweek,
+    "\ndates", paste0("(", last_biweek_old_model$mindate, ", ",
+                    last_biweek_old_model$maxdate, ")"))
+
+end_old_model <- last_biweek_old_model$maxdate
 
 
 state_res <- state_res %>%
@@ -492,6 +501,10 @@ subset %>%
                   ymin = infections.lo,
                   ymax = infections.hi),
               alpha = .6) +
+  geom_vline(xintercept=end_old_model,
+             linetype=2,
+             color="darkred",
+             linewidth=.5) +
   facet_wrap(~name, ncol=4, scales = "free",
               labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
   scale_y_continuous(labels = comma) +
@@ -518,6 +531,7 @@ subset %>%
 ```
 
 ```{r,eval=save_figures, fig.height=14, fig.width=12}
+
 
 ggsave(here('figures/intervals-and-covidestim-all-states.pdf'))
 
