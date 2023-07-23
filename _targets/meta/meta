@@ -30,6 +30,7 @@ get_shape|function|9d78862e1202dd27|||||||||||||||
 get_shape1|function|8678a2b32bb038d8|||||||||||||||
 get_shape2|function|6742d398675337c8|||||||||||||||
 get_smoothed_ctis|function|d844143a5e98e9e7|||||||||||||||
+get_state_deaths|function|f75ba1d6e39a7895|||||||||||||||
 get_state_testing|function|b46501deb3dfa9b2|||||||||||||||
 get_v1_state|function|d0c32682fca599da|||||||||||||||
 get_v2_corrected|function|5e0d76ee1a844050|||||||||||||||
@@ -62,6 +63,7 @@ reformat_melded|function|588e9482aae30fc7|||||||||||||||
 sample_beta_density|function|ce0e7065102b554a|||||||||||||||
 sample_gamma_density|function|bddb08c0cfa5bc8f|||||||||||||||
 save_survey_data|function|f9939441fdce0c34|||||||||||||||
+state_deaths|stem|f8a16fa7dde0ea56|34ce203c4a30381d|a30995b233b19e8b|-38779985||t19558.1263344885s|9580cb6dffcda4df|15379|rds|local|vector|||3.442||
 state_v1|stem|d7036ddd4520cd17|103e48b7d265a0b1|e337581d10aa2502|-493854472||t19547.967160495s|e6fc1b21ba9aaacc|60459|rds|local|vector|||2705.47||
 state_v2|stem|afbf2b99963d1abf|63bd9e693d95319b|5574b78d03740471|-1883915460||t19548.0034956109s|73237d9b14711d28|27360|rds|local|vector|||4672.03||
 state_v3|stem|5f5718b92166e50e|8cff0268e056503f|5574b78d03740471|2112853936||t19548.0084389657s|d9e6ade04c029530|27363|rds|local|vector|||4447.882||

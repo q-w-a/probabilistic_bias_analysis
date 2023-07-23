@@ -1077,35 +1077,9 @@ state_res %>%
            #  fill = "#3E3D3D",
              alpha = .5,
              show.legend=FALSE) +
-  # geom_ribbon(aes(x = date,
-  #                 fill = 'Covidestim',
-  #                 ymin = infections.lo,
-  #                 ymax = infections.hi),
-  #             alpha = .5) +
-  # facet_grid(~vlabel, scales = "free_y",
-  #             labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
   scale_x_date(date_breaks = "2 months", 
                date_labels = "%b %Y") +
   theme_c(legend.position="top") +
-  # theme_c(axis.text.x = element_text(size = 16),
-  #         axis.title.y = element_text(size=13),
-  #         plot.title=element_text(face = "bold",
-  #                                 hjust = .5, 
-  #                                 size = 24,
-  #                                 margin=margin(5,5,15,5,'pt')),
-  #         strip.background = element_rect(fill = "#393939"),
-  #         strip.text = element_text(color =  "white", size = 16),
-  #         strip.text.y = element_text(margin = margin(5,5,5,5,'pt'),
-  #                                     size = 22,
-  #                                     face="bold"),
-  #         strip.text.x =  element_text(margin = margin(5,3,5,3,'pt'),
-  #                                      face = "bold",
-  #                                      size = 22),
-  #         plot.subtitle = ggtext::element_markdown(size = 25,margin = margin(3,5,10,5,'pt'),
-  #                                      face = "italic"),
-  #         legend.position = "top",
-  #         legend.text =element_text(size = 17),
-  #         legend.title = element_text(size=18, face="bold")) +
   geom_line(aes(x=week, y=share*m,
                 color =variant_category,
                 group=variant_category),
@@ -1130,6 +1104,311 @@ state_res %>%
 
 
 ggsave(here('figures/michigan_variant.pdf'), dpi=400)
+
+```
+
+# Comparing Overlap
+
+Weaknesses in this approach:
+
+- it doesn't distinguish between a very small interval being covered (i.e. when there are very few cases) and a larger interval being covered (i.e. when there are many cases)
+- it doesn't consider the width of the PB interval
+
+
+```{r, fig.height=7.5}
+
+state_overlaps <- subset %>%
+  select(-date) %>%
+  distinct() %>%
+  mutate(lower_overlap = map2_dbl(infections.lo, exp_cases_lb, ~max(.x,.y)),
+         upper_overlap = map2_dbl(infections.hi, exp_cases_ub, ~min(.x,.y)),
+         overlap = case_when(
+           upper_overlap-lower_overlap > 0 ~   upper_overlap-lower_overlap,
+           TRUE ~ 0
+         )) %>%
+  select(contains('overlap'), name, biweek, 
+         population, positive, total, exp_cases_lb,
+         exp_cases_ub, contains('infections')) %>%
+  mutate(overlap_not_norm = overlap,
+         overlap = overlap/population,
+         fraction_overlap = overlap_not_norm/(infections.hi-infections.lo)) 
+
+
+
+#############
+# BY STATE
+#############
+state_overlaps %>%
+  group_by(name) %>%
+  summarize(mean_overlap=mean(fraction_overlap)) %>%
+  ggplot(aes(y= fct_reorder(name, mean_overlap),
+             x =  mean_overlap)) +
+  geom_bar(stat="identity") +
+  theme_c() +
+  labs(y="",
+       x="Mean Overlap",
+       title = "Mean Overlap with Covidestim by State",
+       subtitle = "Overlap Normalized by Width of Covidestim Interval")
+
+
+##########################
+# BY TWO-WEEK INTERVAL
+##########################
+state_overlaps %>%
+  group_by(biweek) %>%
+  summarize(mean_overlap=mean(fraction_overlap)) %>%
+  left_join(dates) %>%
+  group_by(biweek) %>%
+  summarize(date = median(date),
+            mean_overlap=unique(mean_overlap)) %>%
+  ggplot(aes(x=date,
+             y =  mean_overlap)) +
+  geom_bar(stat="identity", alpha =.7) +
+  geom_vline(xintercept=end_old_model,linetype=2,
+             color='darkred',
+             linewidth=1.1) +
+  theme_c() +
+  labs(y="",
+       x="Mean Overlap",
+       title = "Mean Overlap with Covidestim by Time Interval",
+       subtitle = "Overlap Normalized by Width of Covidestim Interval") +
+  scale_x_date(date_breaks="2 months", date_labels="%b %Y")
+
+
+
+
+##########################
+# BY TWO-WEEK INTERVAL
+##########################
+# state_overlaps %>%
+#   mutate(posrate=positive/total) %>%
+#   filter(name %in% sample(unique(state_overlaps$name), 5)) %>%
+#   ggplot(aes(x=posrate, y = fraction_overlap)) +
+#   geom_point(alpha=.8) +
+#   theme_c() +
+#   # facet_wrap(~name, scales="free_y") +
+#   labs(x = "Positivity Rate", y = "Overlap") +
+#   scale_y_continuous(labels=comma)
+```
+
+```{r, fig.height=12}
+
+set.seed(123)
+state_sample <- sample(unique(state_overlaps$name), 16)
+
+state_overlaps %>%
+  mutate(posrate=positive/total) %>%
+ # filter(name %in% state_sample) %>%
+  ggplot(aes(x=posrate, y = fraction_overlap)) +
+  geom_point(alpha=.8) +
+  theme_c() +
+  facet_wrap(~name, scales="free_y") +
+  labs(x = "Positivity Rate", y = "Overlap",
+       title = "Comparing Fraction of Interval Covered by Positivity Rate",
+        subtitle = "Each Point Corresponds to a State-Biweek")
+
+
+
+state_overlaps %>%
+  mutate(posrate=positive/total) %>%
+#  filter(name %in% state_sample) %>%
+  ggplot(aes(x=posrate, y = fraction_overlap)) +
+  geom_point(alpha=.8) +
+  theme_c() +
+ # facet_wrap(~name, scales="free_y") +
+  labs(x = "Positivity Rate", y = "Overlap",
+       title = "Comparing Fraction of Interval Covered by Positivity Rate",
+        subtitle = "Each Point Corresponds to a State-Biweek")
+
+```
+
+```{r, fig.height=7}
+
+state_overlaps %>%
+  mutate(testrate=total/population) %>%
+  filter(name %in% state_sample) %>%
+  ggplot(aes(x=testrate, y = fraction_overlap)) +
+  geom_point(alpha=.8) +
+  theme_c() +
+  facet_wrap(~name, scales="free") +
+  labs( x= "Total Tests / Population Size", 
+        y = "Fraction of Covidestim Interval\nOverlapping with the PB interval",
+        title = "Comparing Fraction of Interval Covered by Testing Rate",
+        subtitle = "Each Point Corresponds to a State-Biweek")
+
+```
+
+```{r}
+
+state_overlaps %>%
+  mutate(testrate=total/population) %>%
+  filter(name %in% state_sample) %>%
+  ggplot(aes(x=testrate, y = fraction_overlap)) +
+  geom_point(alpha=.8) +
+  theme_c() +
+  labs( x= "Total Tests / Population Size", 
+        y = "Fraction of Covidestim Interval\nOverlapping with the PB interval",
+        title = "Comparing Fraction of Interval Covered by Testing Rate",
+        subtitle = "Each Point Corresponds to a State-Biweek")
+
+
+```
+
+## Relationship Between Agreement and Cumulative Incidence (Pre-Omicron)
+
+```{r, fig.height=11}
+
+state_population_link <- "https://www2.census.gov/programs-surveys/popest/datasets/2010-2019/state/detail/SCPRC-EST2019-18+POP-RES.csv"
+state_pop <- read_csv(state_population_link)
+statecodes <- read_csv(here("data/demographic/statecodes.csv"))
+  
+state_pop <- state_pop %>%
+    left_join(statecodes, by = c("NAME" = "state")) %>%
+    select(population = POPESTIMATE2019,
+           state = code,
+           name = NAME) %>%
+    filter(!is.na(state))
+  
+state_deaths <- tar_read(state_deaths, store=targets_dir)
+
+
+set.seed(123)
+state_sample <- sample(unique(state_deaths$state), 5)
+
+state_deaths %>%
+#  filter(state %in% state_sample) %>%
+  ggplot(aes(x=date,y=deaths/cases)) +
+  geom_line() +
+  facet_wrap(~state) +
+  theme_c() +
+  geom_vline(xintercept=end_old_model, color='darkred', linetype=2)
+
+comp_deaths <- state_deaths %>%
+  mutate(omicron=ifelse(date <= mdy("12-02-2021"),
+                        "pre_omicron", "omicron")) %>%
+  group_by(state, omicron) %>%
+  summarize(cumulative_deaths = sum(deaths),
+            cumulative_cases= sum(cases)) %>%
+  pivot_wider(names_from = omicron, 
+              values_from = c(cumulative_deaths, cumulative_cases)) %>%
+  mutate(pre_deaths_over_cases = cumulative_deaths_pre_omicron/cumulative_cases_pre_omicron,
+         omicron_deaths_over_cases = cumulative_deaths_omicron/cumulative_cases_omicron) 
+
+
+
+comp_deaths %>%
+  select(state,pre_deaths_over_cases,omicron_deaths_over_cases) %>%
+  pivot_longer(contains("over_cases")) %>%
+  group_by(state) %>%
+  mutate(pre = value[which(name=="pre_deaths_over_cases")]) %>%
+  mutate(name = case_when(
+    grepl("omicron", name) ~ "Omicron",
+    grepl("pre", name) ~ "Before Omicron"
+  )) %>%
+  ggplot(aes(y=fct_reorder(state,pre),  x= value, fill=name)) +
+  geom_bar(stat='identity', position='dodge') +
+  theme_c(legend.title = element_text(face="bold", size=14)) +
+  labs(x = TeX("$\\frac{Total\\,Deaths}{Total\\,Cases}$"),
+       y="",
+       fill = "Time Period",
+       title = "Total Deaths Over Total Cases in the Time Period Before Omicron\n Compared to During Omicron") +
+  scale_x_continuous(n.breaks=7)
+
+
+
+comp_deaths %>%
+  select(state,pre_deaths_over_cases,omicron_deaths_over_cases) %>%
+  mutate(pct_change =( omicron_deaths_over_cases -pre_deaths_over_cases ) / pre_deaths_over_cases ) %>% 
+  ggplot(aes(y=fct_reorder(state,pct_change),  x= pct_change)) +
+  geom_bar(stat='identity', position='dodge') +
+  theme_c(legend.title = element_text(face="bold", size=11),
+          axis.text.x=element_text(size=14),
+          plot.subtitle = element_text(size=16,
+                                       face="plain", 
+                                       margin=margin(0,0,4,0))) +
+  labs(x = TeX("$\\frac{Total\\,Deaths}{Total\\,Cases}$"),
+       y="",
+       fill = "Time Period",
+       title = TeX("Percent Change in $\\frac{Total\\,Deaths}{Total\\,Cases}$ from the Time Period Before Omicron"),
+       subtitle="Compared to During Omicron") +
+  scale_x_continuous(labels=scales::percent)
+
+
+
+```
+
+```{r}
+
+comp_deaths %>%
+  select(state,pre_deaths_over_cases,omicron_deaths_over_cases) %>%
+  mutate(pct_change =( omicron_deaths_over_cases - pre_deaths_over_cases ) / pre_deaths_over_cases ) %>%
+  left_join(state_overlaps, by = c('state' = 'name')) %>%
+  group_by(state) %>%
+  summarize(mean_overlap=mean(fraction_overlap),
+            pct_change=unique(pct_change)) %>%
+  ggplot(aes(x=pct_change,y=mean_overlap)) +
+  geom_point(size=2) +
+  theme_c(  plot.subtitle = element_text(size=16,
+                                       face="plain", 
+                                       margin=margin(0,0,4,0))) +
+  scale_x_continuous(labels=scales::percent) +
+  labs(x="Percent Change", y = "Mean Overlap\n(By State)", 
+        title = TeX("Relationship Between the Percent Change in $\\frac{Total\\,Deaths}{Total\\,Cases}$ from the Time Period Before Omicron"),
+       subtitle="Compared to During Omicron versus the Mean Overlap")
+
+```
+
+```{r}
+
+comp_deaths %>%
+  rename(name=state) %>%
+  ungroup() %>%
+  left_join(state_pop[,c("name", "population")]) %>%
+  mutate(frac_infected = cumulative_cases_pre_omicron/population) %>%
+  left_join(state_overlaps[,c("name","fraction_overlap", "biweek")]) %>%
+  filter(biweek >= 25) %>%
+  group_by(name) %>%
+  summarize(mean_overlap=mean(fraction_overlap),
+            frac_infected=unique(frac_infected)) %>%
+  ggplot(aes(x=frac_infected, y =mean_overlap)) +
+  geom_point() +
+  theme_c()
+
+
+
+```
+
+```{r}
+
+
+covidestim_link <- "https://covidestim.s3.us-east-2.amazonaws.com/latest/state/estimates.csv"
+  
+covidestim <- read_csv(covidestim_link)
+  
+# join data from each source to include dates before and after 2021-12-02
+covidestim <- covidestim %>%
+    select(date, contains("infections"), state) %>%
+    filter(year(date) > 2020) %>%
+    mutate(week = week(date), year = year(date))
+
+
+covidestim %>%
+  group_by(state) %>%
+  summarize(infections=sum(infections))%>%
+  rename(name=state) %>%
+  left_join(state_pop[,c("name", "population")]) %>%
+  mutate(frac_infected = infections/population) %>%
+  left_join(state_overlaps[,c("name","fraction_overlap", "biweek")]) %>%
+  filter(biweek >= 25) %>%
+  group_by(name) %>%
+  summarize(mean_overlap=mean(fraction_overlap),
+            frac_infected=unique(frac_infected)) %>%
+  ggplot(aes(x=frac_infected, y =mean_overlap)) +
+  geom_point() +
+  theme_c()
+
+
+
 
 ```
 

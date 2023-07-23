@@ -669,5 +669,49 @@ get_variant_proportions <- function() {
   
 }
 
+#------------- State Deaths -------------
+
+get_state_deaths <- function() {
+  
+  
+  if(!file.exists(here("data/data_raw/state-deaths-jhu.RDS"))) {
+    dates <- seq.Date(mdy("12-31-2020"), mdy("02-26-2022"), by="1 day") %>%
+      format("%m-%d-%Y") 
+    
+    links <- paste0("https://raw.githubusercontent.com/CSSEGISandData/COVID-19/master/csse_covid_19_data/csse_covid_19_daily_reports_us/",
+                    dates, ".csv")
+    
+    state_deaths <- map2_df(links, dates, ~read_csv(.x) %>% mutate(date = .y))
+    saveRDS(state_deaths, here("data/data_raw/state-deaths-jhu.RDS"))
+    
+  }
+ 
+  else {
+    state_deaths <- readRDS(here("data/data_raw/state-deaths-jhu.RDS"))
+  }
+
+  state_deaths <- state_deaths %>%
+    filter(FIPS <= 56) %>%
+    # exclude outside of continental U.S.
+    select(date=Date, cases=Confirmed, deaths = Deaths, state=Province_State) %>%
+    group_by(state) %>%
+    mutate(cases=cases-lag(cases, n=1, order_by=date),
+           deaths=deaths-lag(deaths, n=1, order_by=date)) %>%
+    ungroup() %>%
+    filter(!is.na(cases) & !is.na(deaths)) %>%
+    mutate(across(c(cases,deaths), ~ifelse(.x <0, 0, .x)))
+  
+  
+  dates <- readRDS(here("data/data_raw/date_to_biweek.RDS"))
+  
+  state_deaths <- state_deaths %>%
+    left_join(dates) %>%
+    group_by(state,biweek) %>%
+    summarize(across(c(deaths, cases), sum),
+              date=median(date))
+  
+  return(state_deaths)
+ 
+}
 
 

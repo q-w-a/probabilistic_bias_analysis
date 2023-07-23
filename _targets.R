@@ -60,6 +60,9 @@ list(
   tar_target(
     name = variant,
     command = get_variant_proportions()),
+  tar_target(
+    name = state_deaths,
+    command = get_state_deaths()),
   
   #---------------- state-level analysis -------------------
   # set priors
