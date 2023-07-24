@@ -2342,3 +2342,315 @@ county_coverage <- county_covidestim %>%
 
 ```
 
+
+# Cross Correlations 
+
+
+
+```{r plot ccf functions}
+
+objs <- ls()
+remove <- objs[which(!objs %in% c("theme_c", "wjoined", "pal"))]
+rm(remove)
+
+
+
+pal <- c("red", "#10BAC5", "#1B10C5", "#EFB719", "#900C3F", "#FF7400")
+
+names(pal) <- c( "Covidestim",
+                '$Pr(S_1|untested)$ Centered at Survey Value',
+                '$Pr(S_1|untested)$ and $\\beta$ Centered at Survey Values',
+               "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$",
+               "$\\beta$ Centered at Survey Value",
+               "observed"
+               )
+
+
+
+plot_all_ccf <- function(input_df_for_fips, 
+                         varnames= c("differenced_mean_conc",
+                                  "differenced_exp_median")) {
+  
+  versions <- input_df_for_fips %>% 
+    group_split(version)
+  
+  message(length(versions))
+  
+  plt1 <- plot_ccf(versions[[1]], varnames)
+  plt2 <- plot_ccf(versions[[2]], varnames)
+  plt3 <- plot_ccf(versions[[3]], varnames)
+  plt4 <- plot_ccf(versions[[4]], varnames)
+  
+  cowplot::plot_grid(plt1, plt2, plt3, plt4, nrow = 1)
+  
+}
+
+
+plot_ccf <- function(input_df_for_version,
+                     varnames = c("differenced_mean_conc",
+                                  "differenced_exp_median")) {
+  
+  var1 <- varnames[1]
+  var2 <-varnames[2]
+  lab <- unique(input_df_for_version$vlabel)
+  
+  cross_correlations <- ccf(
+    pull(input_df_for_version, var1),
+     pull(input_df_for_version, var2), 
+                            plot = FALSE)
+
+  ccf_res <- tibble(lag = cross_correlations$lag[,,1], 
+                  correlation=cross_correlations$acf[,,1]) 
+
+  
+  county_name <- gsub("County, MA", "", unique(input_df_for_version$name))
+  
+  ccf_res %>%  
+    mutate(max = ifelse(correlation == max(correlation), 
+                        lag, NA),
+           maxcorr = round(max(correlation),3)) %>%
+    ggplot(aes(x=lag, y = correlation)) +
+    geom_point() +
+    geom_linerange(aes(ymin = 0, ymax=correlation)) +
+    theme_c() +
+    theme(plot.title = element_text(size = 12, hjust = .5,
+                                    margin=margin(1,1,8,1)),
+          plot.margin = margin(10,1,1,1),
+            plot.subtitle = element_text(size = 12, hjust = .5, 
+                                         margin = margin(4,1,1,1))) +
+    labs(title =TeX(paste0(
+      "Cross Correlation between $(Y_t)$ and $(Z_t)$, County: ", 
+      county_name)),
+         subtitle = TeX(paste0("Version: ", lab))) +
+    geom_label(aes(x = max, y = correlation,
+                   label = paste0("Max Correlation: ",
+                                  maxcorr, "\n Lag: ",
+                                  max)),
+               hjust = -.1) +
+    ylim(-1,1) +
+    scale_x_continuous(n.breaks = 10)
+    
+}
+
+
+
+
+get_max_lag_by_version <- function(input_df_for_version,
+                                   varnames = c("differenced_mean_conc",
+                                  "differenced_exp_median"),
+                                  comparison = "bias corrected") {
+  
+  var1 <- varnames[1]
+  var2 <-varnames[2]
+  lab <- unique(input_df_for_version$vlabel)
+  
+  cross_correlations <- ccf(
+    pull(input_df_for_version, var1),
+     pull(input_df_for_version, var2), 
+                            plot = FALSE)
+  
+  
+  # cross_correlations <- ccf(input_df_for_version$differenced_mean_conc,
+  #                           input_df_for_version$differenced_exp_median, 
+  #                           plot = FALSE)
+
+  ccf_res <- tibble(lag = cross_correlations$lag[,,1], 
+                  correlation=cross_correlations$acf[,,1]) 
+  
+  m <- ccf_res %>% filter(correlation == max(correlation))
+  
+  tibble(vlabel = unique(input_df_for_version$vlabel),
+         fips = unique(input_df_for_version$fips),
+         max_lag = m$lag,
+         max_corr = m$correlation,
+         comparison = comparison,
+         county_name = unique(input_df_for_version$name))
+
+}
+
+
+
+```
+
+```{r generate differenced df}
+
+differenced_all <- wjoined %>%
+  filter(!is.na(mean_conc)) %>%
+  select(-date) %>%
+  distinct() %>%
+  group_by(vlabel, fips) %>%
+  arrange(biweek) %>%
+  mutate(differenced_exp_median = exp_cases_median -
+           lag(exp_cases_median, n =1),
+         differenced_mean_conc = mean_conc - lag(mean_conc, n = 1),
+         differenced_positive = positive - lag(positive, n = 1),
+         differenced_covidestim = infections - lag(infections, n = 1)) %>%
+  ungroup() %>%
+  filter(!is.na(differenced_exp_median) & !is.na(differenced_mean_conc)) %>%
+  ungroup()
+
+
+```
+
+
+
+### Cross Correlation (Wastewater and Covidestim Estimates)
+
+```{r wastewater covidestim, fig.width = 16}
+
+# glimpse(differenced_all)
+
+
+
+differenced_all %>% 
+  filter(version == "v7" & !is.na(differenced_covidestim)) %>%
+  group_by(fips) %>%
+  group_split() %>% 
+  walk(~ { 
+    plt <- .x %>% plot_ccf(varnames= c("differenced_mean_conc",
+                                  "differenced_covidestim"))
+    print(plt)})
+
+
+```
+
+
+### Cross Correlation (Wastewater and Observed Cases)
+
+```{r, error = FALSE, out.width = "80%"}
+
+# cross correlation plots for each county
+differenced_all %>% 
+  filter(version == "v7") %>%
+  group_by(fips) %>%
+  group_split() %>% 
+  walk(~ { 
+    plt <- .x %>% plot_ccf(varnames= c("differenced_mean_conc",
+                                  "differenced_positive"))
+    print(plt)})
+
+```
+
+
+
+
+
+### Cross Correlation (Wastewater and Bias-Corrected Cases)
+
+
+```{r, fig.width = 23}
+
+# cross correlation plots for each county
+differenced_all %>% 
+  group_by(fips) %>%
+  group_split() %>%
+  walk(~ { 
+    plt <- .x %>% plot_all_ccf()
+    print(plt)})
+
+```
+
+
+# Compare Lags with Maximum Correlation Between Covidestim, Wastewater, and Bias Corrected Counts
+
+
+## Compare Lags Among versions of Bias Corrected Counts 
+
+For each county, lag with the maximum correlation:
+
+```{r, fig.width = 12.7, fig.height =7}
+
+# lags for bias-corrected counts
+lags_all_pb <- differenced_all %>%
+  group_by(fips, vlabel) %>%
+  group_split() %>%
+  map_df(get_max_lag_by_version)
+
+
+lags_all_pb %>%
+  group_by(fips) %>%
+  summarize(`Lags with Maximum Correlation in Some Version` =
+              paste0(unique(max_lag), collapse =", "))
+  
+
+
+# lags for observed counts
+lags_all_observed <- differenced_all %>% 
+  filter(version == "v7") %>%
+  group_by(fips) %>%
+  group_split()%>%
+  map_df(~get_max_lag_by_version(
+    input_df_for_version = .x,
+    varnames= c("differenced_mean_conc",
+                "differenced_positive"),
+   comparison = "observed" )) %>%
+  select(-vlabel)
+
+
+# compare pb max correlations to those for observed counts 
+lags_all_pb %>%
+  bind_rows(lags_all_observed) %>%
+  mutate(vlabel=as.character(vlabel)) %>%
+   mutate(source = ifelse(!is.na(vlabel), vlabel, comparison)) %>%
+  group_by(fips) %>%
+  mutate(m = median(max_corr)) %>%
+  ungroup() %>%
+  mutate(max_lag=factor(max_lag)) %>%
+  mutate(county_name = gsub("County, MA", "", county_name)) %>%
+   ggplot(aes(x=fct_reorder(county_name,m, 
+                           .desc = TRUE),
+             y = max_corr,
+             color = source, 
+             shape = max_lag)) +
+  geom_jitter(aes(fill=source),color="black",
+              height =0, width =.15, size = 3,
+              stroke=.1,
+              alpha=.9) +
+  scale_shape_manual(values=c(21,22,24)) +
+  scale_fill_manual(values=pal,
+                    name = 'Time Series Compared with\nWastewater:',
+                    labels=TeX(names(pal))) +
+  theme_bw() +
+  theme_c() +
+  theme(plot.title = element_text(size=16,hjust=.2, face="bold"),
+    # axis.text.x = element_text(angle  = 60, vjust = .4),
+    axis.text.x = element_text(angle  = 50, vjust = .95, hjust=1, size =14),
+    axis.title.x = element_text(margin = margin(3,3,3,3)),
+        legend.text = element_text(size = 14, hjust=0),
+        axis.text.y = element_text(size = 11),
+        legend.title = element_text(face="bold", size = 16)) +
+  labs(y = "Maximum Correlation") +
+  scale_size_discrete(breaks = c(1.9,2),
+                      range = c(1.9,2),
+                      labels = c("bias corrected", "observed")) +
+  labs(x = "",
+       y = "Maximum Correlation",
+       title = "Comparing Maximum Correlation of Probabilistic Bias Counts with Wastewater\nto that Between Observed Cases and Wastewater",
+       shape = "Lag Where Maximum\nCorrelation Was Obtained:",
+       color = "Time Series Compared with Wastewater:") +
+  guides(shape = guide_legend(override.aes = list(size = 4, stroke=.4)),
+         fill= guide_legend(override.aes = list(size = 3.5, 
+                                                shape=24, 
+                                                stroke=.8))) 
+
+
+
+
+ggsave(here("figures/cross_correlation_observed_pb.pdf"), 
+       height = 8, width=12)
+
+
+
+# max series by rank; use for following comparison
+max_series_by_rank <- lags_all_pb %>%
+  group_by(fips) %>%
+  mutate(r = rank(max_corr),
+            series = vlabel[which.max(r)]) %>%
+  group_by(series) %>%
+  summarize(n=n()) %>%
+  filter(n==max(n)) %>%
+  pull(series)
+
+
+```
+
