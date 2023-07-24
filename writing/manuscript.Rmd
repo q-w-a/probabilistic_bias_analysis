@@ -59,9 +59,13 @@ include_graphics(here('figures/ratio-estimated-to-observed-multiple-waves.pdf'))
 Because there is no established ground truth for the true number of infections for any time-interval, a useful source of comparison is other models that also estimate the true number of incident infections. Covidestim is a notable Bayesian nowcasting model that has been maintained throughout the course of the pandemic, sharing publicly available estimates at the state and county levels [@chitwood2022]. Consequently, we compare our estimates to Covidestim, with recognition that the Covidestim model is not a ground truth, and this comparison serves primarily to gain insight into the times and locations where estimates are concordant or discordant rather than to validate the approach. Given the true number of infections is unobserved, we are to some extent operating in the unknown, and must rely on assumptions based on available data. 
 
 In Figure \@ref(fig:simulation-intervals-state), we see the simulation intervals for all two-week intervals and all states as well as the 95% Covidestim credible intervals summed to be on the same time scale. 
-We see agreement is much higher before the time period spanning December 2021 through January 2022, where Covidestim intervals tend to be higher than the probabilistic bias intervals. This period corresponds to the Omicron wave of the pandemic (Supplementary Figure michigan-variant). This was a major shift in the pandemic: the Omicron variant is highly transmissible compared to previous variants, and it has immune invasion capacity, which means vaccines provides less protection against infection [@andrews2022]. Omicron also is associated with a lower infection fatality ratio [@liu2022], as well as milder infection overall, which may influence testing behavior. Omicron's rise was rapid too, presumably as a result of this enhanced transmissibility and immune escape;  it became the dominant variant over the course of a single month. 
+We see agreement is much higher before the time period spanning December 2021 through January 2022, where Covidestim intervals tend to be higher than the probabilistic bias intervals. This period corresponds to the Omicron wave of the pandemic (Supplementary Figure michigan-variant). This was a major shift in the pandemic: the Omicron variant is highly transmissible compared to previous variants, and it has immune invasion capacity, which means vaccines provides less protection against infection [@andrews2022]. Omicron also is associated with a lower infection fatality ratio [@liu2022], as well as milder infection overall, which may influence testing behavior. Its rise to dominance was rapid, presumably as a result of this enhanced transmissibility and immune escape;  it became the dominant variant over the course of a single month. 
 
 As a result of these dramatic changes, Chitwood *et al.* @chitwood2022 made substantial changes to Covidestim, as noted in the model change log. Because the variant causes much milder infections, the infection fatality for Omicron infections is lower than previous variants, and death counts were much lower relative to the number of infections. To handle this change, rather than fitting model with deaths, they switched to using hospitalizations. They also allowed for the possibility of reinfections, since although reinfections were more rare with previous variants, Omicron is associated with higher reinfection rates [@pulliam2022]. The changes in the model may contribute to the differences we see between the probabilistic bias intervals and Covidestim intervals during the Omicron wave. 
+
+
+ADD TEST POSITIVITY FIGURE
+FIGURE OUT WHICH STATES HAVE LAGS
 
 Another difference we see is in the months of the summer of 2021, where the increase in Covidestim estimates appears lagged in comparison to the probabilistic bias simulation intervals. The difference we see between the Covidestim estimates and probabilistic bias intervals is likely a result of the way these approaches treat incomplete testing. The focus of the probabilistic bias analysis is to correct for incomplete testing, and as such the method is sensitive to changes in the total number tested and the positivity rate. By contrast, while Covidestim models probabilities of diagnosis by symptom state to allow for variation in case ascertainment, the total number of tests is not an input into the model, so model estimates are not affected by changes in testing rate. This is particularly relevant during the summer of 2021, when an increase in test positivity preceded the increase in observed tests, leading to an increase in the probabilistic bias simulation intervals that precedes the increase in Covidestim estimates. 
 
@@ -77,7 +81,7 @@ include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 At the county level, this approach to approximating the true number of infections is only possible in a subset of the counties in the United States due to the need for both positive tests and total tests. While positive tests are frequently reported at the county level, total tests are not. 
 
-We focus on Massachussetts because this state is the only state that reports both positive and total tests and has the most counties where wastewater data was reported throughout the entire time period of interest. Wastewater data here is useful in the sense that it is inherently not subject to the same biases as voluntary testing data, since it captures anyone in the wastewater catchment area, and as such is not influenced by more symptomatic people being more likely to be tested or differences in access to testing.
+We focus on Massachussetts because this state is the only state that reports both positive and total tests at the county-level and has wastewater data consistently reported throughout the entire time period of interest. Wastewater data here is useful in the sense that it is inherently not subject to the same biases as voluntary testing data, since it captures anyone in the wastewater catchment area, and as such is not influenced by more symptomatic people being more likely to be tested or differences in access to testing.
 
 In Figure \@ref(fig:sim-intervals-color-county), we present simulation intervals for two of the four implementations of probabilistic bias analysis. For most time intervals, the other two implementations fall between those shown in the figure.
 
@@ -119,7 +123,7 @@ $\frac{N^*_{\text{tested}} + N^*_{\text{untested}}}{N^*_{\text{tested}}},$ where
 On the $x$-axis, we have the number tested over the population size, $\dfrac{N_{\text{tested}}}{N}$. Thus, we see the trend in each panel where for small changes in testing rate when the testing rate is very low, the ratio of unobserved to unobserved is very high since $N^*_{\text{untested}}$ will be large relative  $N^*_{\text{tested}}$, that is, a large proportion of infections are going undetected. However, with higher testing rates,  $N^*_{\text{untested}}$ will be smaller relative  $N^*_{\text{tested}}$, and the ratio of estimated to observed infections nears one.
 
 
-```{r testrate-v-ratio, fig.cap  = 'The ratio of the median estimated infections to observed infections plotted against the testing rate, where the testing rate is calculated as the total number tested in a two-week interval over the population size. When the priors are the same for all time intervals, there is minimal variability relationship between the testing rate and the ratio of estimated to observed infections, since the correction for incomplete testing and diagnostic test inaccuracy is identical for each time-interval. However, when we allow $\\beta$ or $\\Pr(S_1|\\text{untested})$ to vary over time, there is more variability in the relationship. A horizontal line in red at 1 is included to reference; a ratio of exactly 1 would indicate no infections went unobserved.'}
+```{r testrate-v-ratio, fig.cap ="The ratio of the median estimated infections to observed infections plotted against the testing rate, where the testing rate is calculated as the total number tested in a two-week interval over the population size. When the priors are the same for all time intervals, there is minimal variability relationship between the testing rate and the ratio of estimated to observed infections, since the correction for incomplete testing and diagnostic test inaccuracy is identical for each time-interval. However, when we allow $\\beta$ or $\\Pr(S_1|\\text{untested})$ to vary over time, there is more variability in the relationship. A horizontal line in red at 1 is included to reference; a ratio of exactly 1 would indicate no infections went unobserved."}
 
 include_graphics(here('figures/testing-rate-ratio-county.pdf'))
 
@@ -129,7 +133,7 @@ include_graphics(here('figures/testing-rate-ratio-county.pdf'))
 
 As with the state level results, we also compare estimates at the county-level to Covidestim estimates. However, at the county-level, we proceeded with Massachusetts specifically with the aim of providing another source of comparison: wastewater concentrations.
 
-We see in Figure \@ref(fig:correlations)a) that for all implementations, the probabilistic bias estimates are highly correlated with wastewater concentrations, and in Figure \@ref(fig:correlations)b) we see they also highly correlated with the Covidestim estimates. The correlations in both cases are very similar between implementations, differing by less than 0.01. 
+We see in Figure \@ref(fig:correlations) (a) that for all implementations, the probabilistic bias estimates are highly correlated with wastewater concentrations, and in Figure \@ref(fig:correlations) (b) we see they also highly correlated with the Covidestim estimates. The correlations in both cases are very similar between implementations, differing by less than 0.01. 
 
 
 ```{r correlations, fig.cap ="Considering the correlations between the probabilistic bias estimates and wastewater concentrations (a) and between probablistic bias estimates and Covidestim estimates (b). We see that all implementations considered are highly correlated with both wastewater concentrations and Covidestim estimates. In both panels, each point is a county-biweek, where the value on the $x$-axis is the median of the simulation interval for that county in that two-week interval. For (a), the value on the $y$-axis is the mean wastewater concentration for that county and two-week interval. For (b), the value on the $y$-axis is the median of the Covidestim credible interval for that county, summed to be on the same two-week-interval time scale. The correlations are highly similar between implementations, differing by less than 0.01."}
@@ -142,7 +146,8 @@ include_graphics(
 ```
 
 
-Table \@ref(table:coverage) is 
+In Table \@ref(table:coverage), we summarize the concordance with Covidestim at the county and state levels by comparing the percent of simulation intervals where the Covidestim median falls above, below, or within the interval. At both geographic scales, we see that the probabilistic bias implementation that is most concordant with Covidestim is the that where the prior for $\Pr(S_1|\text{untested})$ is centered at the survey value of the percent of the population experiencing COVID-19-like illness, followed by the implementation that does not vary by state or date. This agreement was not a result of wider bounds, as the simulation intervals for the other two implementations were larger on average. For both of these implementations, when the Covidestim median was not contained, this was typically because it fell above the simulation interval. As is clear from Figure \@ref(fig:simulation-intervals-state) at the state-level, this often occurred during the Omicron wave, when the Covidestim estimates are consistently above the probabilistic bias counts. 
+
 
 \renewcommand{\arraystretch}{2}
 
@@ -161,6 +166,7 @@ county_coverage %>%
   group_by(`Geographic Scale`) %>%
   arrange(desc(`Percent Contained in Interval`),
           .by_group=TRUE) %>%
+  mutate(across(contains("percent"),~ paste0(round(.,2), "\\%"))) %>%
   ungroup() %>%
   select(-`Geographic Scale`) %>%
   kbl(caption = "\\label{table:coverage}Coverage of Covidestim Medians at the County and State Levels",
@@ -178,7 +184,7 @@ county_coverage %>%
            extra_css = "border-bottom: 1px solid;") %>%
   row_spec(0, font_size=11, bold=TRUE) %>%
   footnote(general = paste0("The percent of simulation intervals where the Covidestim median falls below, within, or above the interval,",
-  "when considering all simulation intervals for that implementation and geographic scale.",
+  "when considering all simulation intervals for that implementation and geographic scale. ",
   "Implementations are ordered from those with the highest proportion of Covidestim medians contained in the interval, to the lowest."),
   general_title ="", footnote_as_chunk=TRUE, threeparttable=TRUE)
 
@@ -187,18 +193,18 @@ county_coverage %>%
 
 Also of interest is whether there is a lag between the wastewater concentrations and bias corrected estimates. Although wastewater concentrations can be a leading indicator since people may shed viral material before developing symptoms and subsequently getting tested, the lead time is a result of multiple epidemiological factors, including viral shedding dynamics that may differ with evolution of the virus, access to testing, and testing behavior [@olesen2021a]. Indeed, the lead or lag time between wastewater concentrations and hospitalizations or cases has varies substantially between waves, where the lead time is higher in earlier waves and near zero at later waves, a difference that may be attributable to changes in diagnostic test availability over time  [@xiao2022a; @hopkins2023a].
 
-In Figure \@ref(fig:cross-corr-wastewater), we see that among all counties except one in Massachsuetts, the maximum correlation between mean wastewater concentration and biweekly infection estimates was obtained at a lag of zero, that is, there  typically there was no lag among the biweekly infection estimates and mean wastewater concentrations. This is to be expected given the lead time for wastewater concentrations, when observed, is less than 2 weeks [@olesen2021a]. In two counties, Hamsphire and Barnstable, the lag between the probabilistic bias counts and wastewater concentration was less than that between the observed positive tests and wastewater concentrations.
+In Figure \@ref(fig:cross-corr-wastewater), we see that among all counties except one in Massachsuetts, the maximum correlation between mean wastewater concentration and biweekly infection estimates was obtained at a lag of zero, that is, there  typically there was no lag among the biweekly infection estimates and mean wastewater concentrations. This is to be expected given the lead time for wastewater concentrations, when observed, is less than 2 weeks [@olesen2021a]. In two counties, Hampsphire and Barnstable, the lag between the probabilistic bias counts and wastewater concentration was less than that between the observed positive tests and wastewater concentrations.
 
-```{r cross-corr-wastewater, out.width="70%"}
+```{r cross-corr-wastewater, fig.width=8, fig.cap="Results of cross correlation analysis between probabilistic bias estimates and wastewater concentrations aggregated to the county level for counties in Massachusetts. For each county, the maximum correlation between the probablistic bias estimates and wastewater concentration is shown, colored by implementation; also included is the correlation between the observed positive tests and wastewater concentration. The shape indicates the lag at which the maximum correlation occurred, with units in biweeks. For example, a lag of -1 indicates the maximum correlation is obtained when the biweekly concentrations are lagged by 1 biweek, or equivalently, that the wastewater concentrations lead the observed positive tests by one biweek. For all counties except Barnstable, the maximum correlations between wastewater concentrations and probablistic bias estimates occur at no lag. In Barnstable and Hampshire, observed tests lagged wastewater concentrations, but the probablistic bias estimates for these counties did not."}
 
-include_graphics(here("figures/cross_correlation_observed_pb.jpeg"))
+include_graphics(here("figures/cross_correlation_observed_pb.pdf"))
 
 ```
 
 
 
 
-# Methods 
+# Methods {#Methods}
 
 ## Data
 

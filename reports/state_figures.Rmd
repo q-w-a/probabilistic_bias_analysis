@@ -196,6 +196,19 @@ theme_c <- function(...){
 
 # Summarizing Concordance with Covidestim
 
+Below, we see that although the implementation where $\Pr(S_1|untested)$ was at the survey as well as the implementation did not vary by state or date, the mean simulation interval width was actually lower, indicating the greater concordance was not merely a result of wider bounds.
+
+```{r}
+
+state_res %>%
+  select(-c(date)) %>%
+  distinct() %>%
+  mutate(interval_length =exp_cases_ub - exp_cases_lb) %>%
+  group_by(vlabel) %>%
+  summarize(mean_interval_length = mean(interval_length))
+  
+
+```
 
 
 ```{r,fig.width=14}
