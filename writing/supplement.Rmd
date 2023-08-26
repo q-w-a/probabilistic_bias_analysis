@@ -64,10 +64,12 @@ include_graphics(here('figures/testrate-low-summer.pdf'))
 
 ```
 
-## COVID-19 Trends and Impact Survey 
+# COVID-19 Trends and Impact Survey 
 
 ```{r, fig.cap="The ratio of the screening test positivity over the overall test positivity from the COVID-19 Trends and Impact Survey is taken to be the estimate of $\\beta$. Because of the noise present inthe data, we use the spline smoothed values to inform the priors. More specifically, we use cubic spline smoothing with 2 knots (July 15th, 2021 and December 1st, 2021). While there are estimates of $\\Pr(S_1|\\text{untested})$ for all states (seen in the following figure), there are 27 states with estimates of $\\beta$.", fig.width=14,fig.height=12}
+
 include_graphics(here('figures/smoothing-beta.pdf'))
+
 ```
 
 
@@ -78,6 +80,20 @@ include_graphics(here('figures/smoothing-s-untested.pdf'))
 
 ```
 
+
+# Comparing Lag Between Probabilistic Bias Estimates and Covidestim Infections
+
+```{r}
+
+include_graphics(here('figures/intervals-and-covidestim-states-lag.pdf'))
+
+```
+
+```{r}
+
+include_graphics(here('figures/testpos-lag.pdf'))
+
+```
 
 # County Results by Implementation
 

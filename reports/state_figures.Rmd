@@ -205,10 +205,99 @@ state_res %>%
   distinct() %>%
   mutate(interval_length =exp_cases_ub - exp_cases_lb) %>%
   group_by(vlabel) %>%
-  summarize(mean_interval_length = mean(interval_length))
+  summarize(mean_interval_length = mean(interval_length)) %>%
+  arrange(desc(mean_interval_length))
   
 
 ```
+
+```{r}
+
+state_res_differenced <- state_res %>%
+  select(-date) %>% distinct() %>%
+  group_by(state, vlabel) %>%
+  mutate(exp_cases_median_differenced = exp_cases_median - lag(exp_cases_median, n =1, order_by = biweek),
+         infections_differenced = infections - lag(infections, n = 1, order_by=biweek)) %>%
+  select(state, name, vlabel, contains('differenced'), biweek) %>%
+  filter(!is.na(exp_cases_median_differenced)) %>%
+  filter(biweek <=25)
+
+
+# if lag is NEGATIVE, covidestim LEADS wastewater
+# if lag is POSITIVE, covidestim LAGS wastewater
+# since by the documentation, 'the lag k value returned by ccf(x, y) estimates
+# the correlation between x[t+k] and y[t].'
+
+get_max_lag_by_version <- function(input_df_for_version,
+                                   varnames = c("infections_differenced",
+                                  "exp_cases_median_differenced"),
+                                  comparison = "bias corrected") {
+  
+  var1 <- varnames[1]
+  var2 <-varnames[2]
+  lab <- unique(input_df_for_version$vlabel)
+  
+  cross_correlations <- ccf(
+    pull(input_df_for_version, var1),
+     pull(input_df_for_version, var2), 
+                            plot = FALSE,
+    lag.max=3)
+  
+
+  ccf_res <- tibble(lag = cross_correlations$lag[,,1], 
+                  correlation=cross_correlations$acf[,,1]) 
+  
+  m <- ccf_res %>% filter(correlation == max(correlation))
+  
+  tibble(vlabel = unique(input_df_for_version$vlabel),
+         fips = unique(input_df_for_version$state),
+         max_lag = m$lag,
+         max_corr = m$correlation,
+         comparison = comparison,
+         name = unique(input_df_for_version$name))
+
+}
+
+
+cross_corr <- state_res_differenced %>%
+  group_by(state, vlabel) %>%
+  group_split() %>%
+  map_df(get_max_lag_by_version) 
+  
+states_with_lag <- cross_corr %>%
+  filter(max_lag >  0 & 
+           vlabel == "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$" & 
+           max_corr > .55) %>% 
+  pull(fips) %>%
+  unique()
+
+
+
+```
+
+
+
+
+```{r, include=FALSE}
+
+state_res_differenced %>%
+  filter(state == "AL" & vlabel == "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$") %>%
+  ggplot(aes(x=exp_cases_median_differenced, y = infections_differenced)) +
+  geom_point()
+
+
+
+state_res %>%
+  filter(state == "AL" & vlabel == "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$") %>%
+  ggplot(aes(x=exp_cases_median, y = infections)) +
+  geom_point()
+
+
+
+
+```
+
+
 
 
 ```{r,fig.width=14}
@@ -548,6 +637,139 @@ subset %>%
 
 ggsave(here('figures/intervals-and-covidestim-all-states.pdf'))
 
+
+```
+
+
+## Compare States that Have a Lag
+
+```{r,  fig.height=11, fig.width=12}
+
+# states_with_lag
+
+subset %>%
+    filter(state %in% states_with_lag & biweek <= 25) %>%
+   ggplot() +
+  geom_ribbon(aes(x = date, 
+             ymin = exp_cases_lb,
+             ymax = exp_cases_ub,
+             fill = 'Probabilistic Bias Analysis'),
+             alpha = .8,
+             show.legend=FALSE) +
+  geom_ribbon(aes(x = date,
+                  fill = 'Covidestim',
+                  ymin = infections.lo,
+                  ymax = infections.hi),
+              alpha = .6) +
+  # geom_vline(xintercept=end_old_model,
+  #            linetype=2,
+  #            color="darkred",
+  #            linewidth=.5) +
+  facet_wrap(~name, ncol=3, scales = "free",
+              labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+  scale_y_continuous(labels = comma) +
+  scale_x_date(date_breaks = "3.5 months", 
+               date_labels = "%b %Y") +
+  theme_c(axis.text.x=element_text(size=7),
+          axis.text.y = element_text(size=4.5),
+          legend.position = "top",
+          legend.text=element_text(size=12),
+          strip.text.x=element_text(size=11,
+                                    face='plain',
+                                    color='white')) +
+  scale_fill_manual(values =comp_state_pal, name='')  +
+  labs(y = "Estimated Infections",
+       title = paste0("Estimated Infections by State\nin States with a Lag")) +
+  guides(color = guide_legend(override.aes = list(linewidth =2),
+                              nrow=2,
+                              byrow=TRUE))
+
+
+```
+
+```{r, fig.height=11, fig.width=12, eval=save_figures}
+
+ggsave(here('figures/intervals-and-covidestim-states-lag.pdf'))
+
+```
+
+
+## Test Positivity and Positive Tests in States with a Lag
+
+
+```{r testpos-lag, fig.height=14, fig.width=12}
+
+############################################
+# POSITIVE TESTS AND TEST POSITIVITY
+############################################
+pltlist <- subset %>%
+  filter(biweek<=25) %>%
+  filter(state %in% states_with_lag) %>%
+    mutate(testpos = positive/total) %>%
+  group_by(across(-date)) %>%
+  summarize(date=min(date) + days(7)) %>%
+  group_by(state) %>%
+  mutate(adj = (1/max(testpos)) * max(positive)) %>%
+  group_split() %>%
+  map(~ {
+    adj <-unique(.x$adj)
+    .x %>%
+      ggplot(aes(x=date))+
+    geom_line(aes(y=positive, color = 'Positive Tests')) +
+      geom_point(aes(y=positive, color = 'Positive Tests'),
+              alpha=.5,
+              size=.8) +
+    geom_line(aes(y=testpos*adj, color='Test Positivity'),
+              linetype=2) +
+      geom_point(aes(y=testpos*adj, color='Test Positivity'),
+              alpha=.5,
+              size=.8) +
+    #scale_linetype_discrete(breaks = c(1,1,2)) +
+    scale_color_manual(values=c(
+                                "Positive Tests"= "#279143",
+                                "Test Positivity"= '#E38E4F')) +
+    guides(color = guide_legend(override.aes = list(linetype = c(1,2),
+                                                    linewidth=c(2,2)))) +
+    theme_c() +
+    theme(axis.title = element_text(size=10),
+          axis.text =element_text(size=9),
+          legend.position="none") +
+    scale_y_continuous(labels=comma, 
+                       sec.axis = sec_axis(
+                         ~./adj,
+                         name = 'Test Positivity')) +
+    labs(color ='',
+         y="Positive Tests",
+         x= "Date") +
+      facet_wrap(~name)
+        
+  })
+
+legend <- get_legend(
+  pltlist[[1]] +
+    theme(legend.position = "top",
+          legend.text=element_text(size=16))
+)
+
+
+title_gg <- ggplot() + 
+  labs(title = "Comparing Trends in Positive Tests and Test Positivity") + 
+  theme(plot.title=element_text(face="bold",
+                                hjust = .5, 
+                                size = 18,
+                                margin =margin(5,0,2,0)))
+
+
+plt <- cowplot::plot_grid(plotlist=pltlist, ncol=3) 
+
+plot_grid(title_gg, legend, plt, rel_heights=c(.03, .03,.94), ncol=1)
+
+
+```
+
+```{r, eval=save_figures, fig.height=14, fig.width=12}
+
+ggsave(here('figures/testpos-lag.pdf'))
 
 ```
 
