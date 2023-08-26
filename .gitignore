@@ -7,3 +7,4 @@ README.html
 reports/*_cache
 output_html/*_files
 writing/manuscript.log
+**/*.log
