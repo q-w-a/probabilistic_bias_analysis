@@ -6,12 +6,13 @@ output:
   bookdown::pdf_document2:
     toc: true
     number_sections: false
-  
+header-includes:
+- \usepackage{float}
 ---
 
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE)
+knitr::opts_chunk$set(echo = FALSE, message=FALSE, warning=FALSE, fig.pos="H",out.extra = "")
 library(knitr)
 library(here)
 
@@ -21,7 +22,7 @@ library(here)
 # Specification of the Priors
 
 
-```{r ctis-by-state, fig.cap ="Since $\\beta$ represents the ratio of $\\Pr(\\text{test}_+|\\text{untested}, S_0)$ to $\\Pr(\\text{test}_+|\\text{tested})$, we estimate $\\beta$ from the COVID-19 Trends and Impact Survey as the ratio of the screening test positivity over the overall test positivity. Here, we consider the 2.5\\% and 97.5\\% percentiles and mean for each state. Most have a mean near $20%$."}
+```{r ctis-by-state, fig.cap ="Since $\\beta$ represents the ratio of $\\Pr(\\text{test}_+|\\text{untested}, S_0)$ to $\\Pr(\\text{test}_+|\\text{tested})$, we estimate $\\beta$ from the COVID-19 Trends and Impact Survey as the ratio of the screening test positivity over the overall test positivity. Here, we consider the 2.5\\% and 97.5\\% percentiles and mean for each state. Most have a mean near 0.20."}
 
 include_graphics(here("figures/emp-estimate-beta-dist-by-state.pdf"))
 
@@ -58,7 +59,7 @@ include_graphics(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 # Testing Rate (2021-06-18 - 2021-07-01) 
 
-```{r testrate-low-summer, fig.cap="Testing rate, calculated as the etotal number of tests for a 2-week interval in a state over the census population in that state, over time. The median across states for each two-week interval is shown in red. In relation to Figure 1 in the main text, where we see that the period with the highest ratio of estimated to observed infections is June 18, 2021 through July 1, 2021, we see here that testing rates across states are at a minimum during this time period."}
+```{r testrate-low-summer, fig.cap="Testing rate, calculated as the total number of tests for a 2-week interval in a state over the census population in that state, over time. The median across states for each two-week interval is shown in red. In relation to Figure 1 in the main text, where we see that the period with the highest ratio of estimated to observed infections is June 18, 2021 through July 1, 2021, we see here that testing rates across states are at a minimum during this time period."}
 
 include_graphics(here('figures/testrate-low-summer.pdf'))
 
@@ -85,11 +86,11 @@ include_graphics(here('figures/smoothing-s-untested.pdf'))
 
 ```{r}
 
-include_graphics(here('figures/intervals-and-covidestim-states-lag.pdf'))
+# include_graphics(here('figures/intervals-and-covidestim-states-lag.pdf'))
 
 ```
 
-```{r}
+```{r lagged-figs, fig.cap="States where the Covidestim infection estimates are lagged relative to the probabilistic bias estimates, that is, they are most highly correlated when the Covidestim infections are lagged by one or more biweeks. (a) Simulation intervals demonstrating the lag seen around the delta peak in summer 2021. (b) Test positivity and positive tests for each state. Increases in test positivity tend to precede increases in positive tests, and these increases in test positivity result in increases in the estimates probduced by the probabilistic bias analysis seen in part (a)."}
 
 include_graphics(here('figures/testpos-lag.pdf'))
 
@@ -106,7 +107,7 @@ include_graphics(here('figures/simulation-intervals-faceted-version-county.pdf')
 
 # Variant Data
 
-```{r michigan-variant, fig.cap = "Simulation intervals for Michigan along with the variant proportions for variants designated as *Variant of Interest* or *Variant of Concern* by the World Health Organization. These variant proportions are not specific to Michigan; the estimates are for the United States. The rise in Omicron corresponds to the dramatic increase in both the probabilistic bias intervals and Covidestim estimates in December of 2021 through January of 2022. We also see the increase in the Delta variant that precedes the Delta wave in the summer of 2021."}
+```{r michigan-variant, fig.cap = "Simulation intervals for Michigan along with the variant proportions for variants designated as \\emph{Variant of Interest} or \\emph{Variant of Concern} by the World Health Organization. These variant proportions are not specific to Michigan; the estimates are for the United States. The rise in Omicron corresponds to the dramatic increase in both the probabilistic bias intervals and Covidestim estimates in December of 2021 through January of 2022. We also see the increase in the Delta variant that precedes the Delta wave in the summer of 2021."}
 
 include_graphics(here('figures/michigan_variant.pdf'))
 

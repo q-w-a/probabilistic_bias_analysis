@@ -13,11 +13,16 @@ output:
 knit: (function(input, ...) {
     rmarkdown::render(
       input,
-      output_dir = "../output_html")})
+      output_dir = "../output")})
 ---
 
 ```{r setup, include=FALSE}
-knitr::opts_chunk$set(echo = TRUE, message=FALSE, warning=FALSE,cache=TRUE, fig.width=10, fig.height=7)
+knitr::opts_chunk$set(echo = TRUE, 
+                      message=FALSE, 
+                      warning=FALSE,
+                      cache=TRUE, 
+                      fig.width=10, 
+                      fig.height=7)
 
 library(tidyverse)
 library(targets)

@@ -7,13 +7,14 @@ output:
     df_print: paged
     code_folding: hide
     css: !expr here::here('css/template.css')
+    toc_depth: 4
   html_document:
     df_print: paged
     toc-depth: 4
 knit: (function(input, ...) {
     rmarkdown::render(
       input,
-      output_dir = "../output_html")})
+      output_dir = "../output")})
 ---
 
 ```{r setup, include=FALSE}
@@ -206,7 +207,8 @@ state_res %>%
   mutate(interval_length =exp_cases_ub - exp_cases_lb) %>%
   group_by(vlabel) %>%
   summarize(mean_interval_length = mean(interval_length)) %>%
-  arrange(desc(mean_interval_length))
+  arrange(desc(mean_interval_length)) %>%
+  kableExtra::kbl()
   
 
 ```
@@ -215,12 +217,20 @@ state_res %>%
 
 state_res_differenced <- state_res %>%
   select(-date) %>% distinct() %>%
+  mutate(testpos=positive/total) %>%
   group_by(state, vlabel) %>%
-  mutate(exp_cases_median_differenced = exp_cases_median - lag(exp_cases_median, n =1, order_by = biweek),
-         infections_differenced = infections - lag(infections, n = 1, order_by=biweek)) %>%
+  mutate(exp_cases_median_differenced =
+           exp_cases_median - lag(exp_cases_median,
+                                  n =1,
+                                  order_by = biweek),
+         infections_differenced = infections - lag(infections,
+                                                   n = 1,
+                                                   order_by=biweek),
+         testpos_differenced = lag(testpos, n=1, order_by=biweek),
+         positive_differenced =lag(positive,n=1,order_by=biweek)) %>%
   select(state, name, vlabel, contains('differenced'), biweek) %>%
   filter(!is.na(exp_cases_median_differenced)) %>%
-  filter(biweek <=25)
+  filter( biweek <=25)
 
 
 # if lag is NEGATIVE, covidestim LEADS wastewater
@@ -265,12 +275,31 @@ cross_corr <- state_res_differenced %>%
   map_df(get_max_lag_by_version) 
   
 states_with_lag <- cross_corr %>%
-  filter(max_lag >  0 & 
-           vlabel == "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$" & 
-           max_corr > .55) %>% 
+  filter(max_lag >  0 & vlabel == "$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$") %>%
+  # remove those where lag appears to be due to low correlation rather 
+  # than true lag
+  filter(max_corr > .6) %>% 
   pull(fips) %>%
   unique()
 
+
+
+cross_corr_testpos <- state_res_differenced %>%
+  filter(biweek >=6 & biweek <= 25) %>%
+  # positive tests and positivity are not dependent on vlabel; use this
+  # one because it goes to earlier dates
+  filter(vlabel=="$Priors\\,Do\\,Not\\,Vary\\,by\\,State\\,and\\,Date$") %>%
+  group_by(state, vlabel) %>%
+  group_split() %>%
+  map_df(~get_max_lag_by_version(.x,
+    varnames = c("positive_differenced", 
+                 "testpos_differenced"))) %>%
+  filter(max_lag > 0) %>%
+  pull(fips) %>%
+  unique()
+
+# length(states_with_lag)
+# setdiff(states_with_lag, cross_corr_testpos) %>% length()
 
 
 ```
@@ -643,12 +672,14 @@ ggsave(here('figures/intervals-and-covidestim-all-states.pdf'))
 
 ## Compare States that Have a Lag
 
+States where the Covidestim estimates are lagged relative to the probabilistic bias counts are `r subset %>% filter(state %in% states_with_lag) %>% pull(name) %>% unique()`.
+
 ```{r,  fig.height=11, fig.width=12}
 
 # states_with_lag
 
-subset %>%
-    filter(state %in% states_with_lag & biweek <= 25) %>%
+lagged_fig_a <- subset %>%
+    filter(state %in% states_with_lag & biweek <= 25 & biweek >=6) %>%
    ggplot() +
   geom_ribbon(aes(x = date, 
              ymin = exp_cases_lb,
@@ -666,9 +697,10 @@ subset %>%
   #            color="darkred",
   #            linewidth=.5) +
   facet_wrap(~name, ncol=3, scales = "free",
-              labeller= labeller(vlabel =as_labeller(TeX, default=label_parsed))) +
+              labeller= labeller(
+                vlabel =as_labeller(TeX, default=label_parsed))) +
   scale_y_continuous(labels = comma) +
-  scale_x_date(date_breaks = "3.5 months", 
+  scale_x_date(date_breaks = "3 months", 
                date_labels = "%b %Y") +
   theme_c(axis.text.x=element_text(size=7),
           axis.text.y = element_text(size=4.5),
@@ -677,13 +709,18 @@ subset %>%
           strip.text.x=element_text(size=11,
                                     face='plain',
                                     color='white')) +
+  theme(plot.title = element_text(face="bold",
+                                 hjust = 0, 
+                                 size = 13,
+                                 margin=margin(0,0,0,0))) +
   scale_fill_manual(values =comp_state_pal, name='')  +
   labs(y = "Estimated Infections",
-       title = paste0("Estimated Infections by State\nin States with a Lag")) +
+       title = paste0(
+         "(a) Estimated Infections by State in States with a Lag")) +
   guides(color = guide_legend(override.aes = list(linewidth =2),
                               nrow=2,
                               byrow=TRUE))
-
+lagged_fig_a
 
 ```
 
@@ -702,8 +739,15 @@ ggsave(here('figures/intervals-and-covidestim-states-lag.pdf'))
 ############################################
 # POSITIVE TESTS AND TEST POSITIVITY
 ############################################
-pltlist <- subset %>%
+
+ subset %>%
   filter(biweek<=25) %>%
+  filter(state %in% states_with_lag) %>%
+    mutate(testpos = positive/total)
+
+
+pltlist <- subset %>%
+  filter(biweek >= 6 & biweek<=25) %>%
   filter(state %in% states_with_lag) %>%
     mutate(testpos = positive/total) %>%
   group_by(across(-date)) %>%
@@ -715,15 +759,18 @@ pltlist <- subset %>%
     adj <-unique(.x$adj)
     .x %>%
       ggplot(aes(x=date))+
-    geom_line(aes(y=positive, color = 'Positive Tests')) +
+    geom_line(aes(y=positive, color = 'Positive Tests'),
+              alpha=.8) +
       geom_point(aes(y=positive, color = 'Positive Tests'),
               alpha=.5,
-              size=.8) +
+              size=.9) +
     geom_line(aes(y=testpos*adj, color='Test Positivity'),
-              linetype=2) +
+              alpha=.8
+              #,linetype=2
+              ) +
       geom_point(aes(y=testpos*adj, color='Test Positivity'),
               alpha=.5,
-              size=.8) +
+              size=.9) +
     #scale_linetype_discrete(breaks = c(1,1,2)) +
     scale_color_manual(values=c(
                                 "Positive Tests"= "#279143",
@@ -741,7 +788,133 @@ pltlist <- subset %>%
     labs(color ='',
          y="Positive Tests",
          x= "Date") +
-      facet_wrap(~name)
+      facet_wrap(~name) +
+      scale_x_date(date_labels="%b %Y",
+                   date_breaks = "3 months")
+        
+  })
+
+legend <- get_legend(
+  pltlist[[1]] +
+    theme(legend.position = "top",
+          legend.text=element_text(size=13, margin=margin(6,3,0,0)))
+)
+
+
+title_gg <- ggplot() +
+  labs(
+    #title = "(b) Comparing Trends in Positive Tests and Test Positivity"
+    title = "") +
+  theme(plot.title=element_text(face="bold",
+                                hjust = 0,
+                                size = 13))
+
+
+plt <- cowplot::plot_grid(plotlist=pltlist, ncol=3) 
+
+lagged_fig_b <- plot_grid(title_gg, legend, plt, rel_heights=c(.03, .03,.94), ncol=1)
+
+# lagged_fig_b <- plot_grid( legend, plt, rel_heights=c(.05,.95), ncol=1)
+
+lagged_fig_b
+
+
+```
+
+### States Where Covidestim Estimates Appear to be Lagged Relative to Probabilistic Bias Counts
+```{r, eval=save_figures, fig.height=14.8, fig.width=12}
+
+
+lag_title <- ggplot() +
+  labs(title = "States Where Covidestim Estimates Appear to be Lagged\n Relative to Probabilistic Bias Counts") +
+  theme(plot.title=element_text(face="bold", hjust = .5, size=18))
+
+plot_grid(# lag_title, 
+          lagged_fig_a + labs(title=""), 
+          lagged_fig_b,
+          labels=c(
+           # "",
+            "(a) Estimated Infections by State in States with a Lag",
+            "(b) Comparing Trends in Positive Tests and Test Positivity in States with a Lag"),
+        #  rel_heights = c(.04, .47,.49),
+          label_x=0,
+         # vjust=c(1.5,1.5,.1),
+        vjust=c(1.5,.1),
+          hjust=-.05,
+          ncol=1)
+
+
+ggsave(here('figures/testpos-lag.pdf'))
+
+```
+
+
+```{r}
+
+########################################################
+# PERCENT CHANGE IN POSITIVE TESTS AND TEST POSITIVITY
+########################################################
+
+ subset %>%
+  filter(biweek<=25) %>%
+  filter(state %in% states_with_lag) %>%
+    mutate(testpos = positive/total)
+
+
+pltlist <- subset %>%
+  filter(biweek >= 6 & biweek<=25) %>%
+  filter(state %in% states_with_lag) %>%
+    mutate(testpos = positive/total) %>%
+  group_by(across(-date)) %>%
+  # put date in midpoint
+  summarize(date=min(date) + days(7)) %>%
+  group_by(state) %>%
+  mutate(pct_change_testpos = (testpos-lag(testpos, n=1, order_by=biweek)) /
+                                 lag(testpos, n=1,
+                                     order_by=biweek),
+         pct_change_positive = (positive - lag(positive,
+                                               n=1,
+                                               order_by=biweek)) / 
+                                 lag(positive,
+                                               n=1,
+                                               order_by=biweek)) %>%
+ #  mutate(adj = (1/max(testpos)) * max(positive)) %>%
+  group_split() %>%
+  map(~ {
+   # adj <-unique(.x$adj)
+    .x %>%
+      ggplot(aes(x=date))+
+    geom_line(aes(y=pct_change_positive, color = 'Positive Tests'),
+              alpha=.8) +
+      geom_point(aes(y=pct_change_positive, color = 'Positive Tests'),
+              alpha=.5,
+              size=.9) +
+    geom_line(aes(y=pct_change_testpos, color='Test Positivity'),
+              alpha=.8
+              #,linetype=2
+              ) +
+      geom_point(aes(y=pct_change_testpos, color='Test Positivity'),
+              alpha=.5,
+              size=.9) +
+    #scale_linetype_discrete(breaks = c(1,1,2)) +
+    scale_color_manual(values=c(
+                                "Positive Tests"= "#279143",
+                                "Test Positivity"= '#E38E4F')) +
+    guides(color = guide_legend(override.aes = list(linetype = c(1,2),
+                                                    linewidth=c(2,2)))) +
+    theme_c() +
+    theme(axis.title = element_text(size=10),
+          axis.text =element_text(size=9),
+          legend.position="none") +
+    # scale_y_continuous(labels=comma, 
+    #                    sec.axis = sec_axis(
+    #                      ~./adj,
+    #                      name = 'Test Positivity')) +
+    labs(color ='',
+         y="Positive Tests",
+         x= "Date") +
+      facet_wrap(~name) +
+      scale_x_date(date_labels="%b %Y")
         
   })
 
@@ -764,15 +937,92 @@ plt <- cowplot::plot_grid(plotlist=pltlist, ncol=3)
 
 plot_grid(title_gg, legend, plt, rel_heights=c(.03, .03,.94), ncol=1)
 
-
 ```
 
-```{r, eval=save_figures, fig.height=14, fig.width=12}
+```{r}
 
-ggsave(here('figures/testpos-lag.pdf'))
+
+########################################################
+# PERCENT CHANGE IN POSITIVE TESTS AND TOTAL TESTS
+########################################################
+
+pltlist <- subset %>%
+  filter(biweek >= 6 & biweek<=25) %>%
+  filter(state %in% states_with_lag) %>%
+    mutate(testpos = positive/total) %>%
+  group_by(across(-date)) %>%
+  # put date in midpoint
+  summarize(date=min(date) + days(7)) %>%
+  group_by(state) %>%
+  mutate(pct_change_testpos = (total-lag(total, n=1, order_by=biweek)) /
+                                 lag(total, n=1,
+                                     order_by=biweek),
+         pct_change_positive = (positive - lag(positive,
+                                               n=1,
+                                               order_by=biweek)) / 
+                                 lag(positive,
+                                               n=1,
+                                               order_by=biweek)) %>%
+ #  mutate(adj = (1/max(testpos)) * max(positive)) %>%
+  group_split() %>%
+  map(~ {
+   # adj <-unique(.x$adj)
+    .x %>%
+      ggplot(aes(x=date))+
+    geom_line(aes(y=pct_change_positive, color = 'Positive Tests'),
+              alpha=.8) +
+      geom_point(aes(y=pct_change_positive, color = 'Positive Tests'),
+              alpha=.5,
+              size=.9) +
+    geom_line(aes(y=pct_change_testpos, color='Total Tests'),
+              alpha=.8
+              #,linetype=2
+              ) +
+      geom_point(aes(y=pct_change_testpos, color='Total Tests'),
+              alpha=.5,
+              size=.9) +
+    #scale_linetype_discrete(breaks = c(1,1,2)) +
+    scale_color_manual(values=c(
+                                "Positive Tests"= "#279143",
+                                "Total Tests"= '#E38E4F')) +
+    guides(color = guide_legend(override.aes = list(linetype = c(1,2),
+                                                    linewidth=c(2,2)))) +
+    theme_c() +
+    theme(axis.title = element_text(size=10),
+          axis.text =element_text(size=9),
+          legend.position="none") +
+    # scale_y_continuous(labels=comma, 
+    #                    sec.axis = sec_axis(
+    #                      ~./adj,
+    #                      name = 'Test Positivity')) +
+    labs(color ='',
+         y="Total Tests",
+         x= "Date") +
+      facet_wrap(~name) +
+      scale_x_date(date_labels="%b %Y")
+        
+  })
+
+legend <- get_legend(
+  pltlist[[1]] +
+    theme(legend.position = "top",
+          legend.text=element_text(size=16))
+)
+
+
+title_gg <- ggplot() + 
+  labs(title = "Comparing Trends in Positive Tests and Total Tests") + 
+  theme(plot.title=element_text(face="bold",
+                                hjust = .5, 
+                                size = 18,
+                                margin =margin(5,0,2,0)))
+
+
+plt <- cowplot::plot_grid(plotlist=pltlist, ncol=3) 
+
+plot_grid(title_gg, legend, plt, rel_heights=c(.03, .03,.94), ncol=1)
 
 ```
-
 
 ## Ratio of Estimated to Observed
 
