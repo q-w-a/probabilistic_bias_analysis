@@ -90,7 +90,7 @@ include_graphics(here('figures/smoothing-s-untested.pdf'))
 
 ```
 
-```{r lagged-figs, fig.cap="States where the Covidestim infection estimates are lagged relative to the probabilistic bias estimates, that is, they are most highly correlated when the Covidestim infections are lagged by one or more biweeks. (a) Simulation intervals demonstrating the lag seen around the delta peak in summer 2021. (b) Test positivity and positive tests for each state. Increases in test positivity tend to precede increases in positive tests, and these increases in test positivity result in increases in the estimates probduced by the probabilistic bias analysis seen in part (a)."}
+```{r lagged-figs, fig.cap="States where the Covidestim infection estimates appear to be lagged relative to the probabilistic bias estimates, that is, they are most highly correlated when the Covidestim infections are lagged by one or more biweeks. (a) Simulation intervals demonstrating the lag seen around the delta peak in summer 2021. (b) Test positivity and positive tests for each state. Increases in test positivity tend to precede increases in positive tests, and these increases in test positivity result in increases in the estimates probduced by the probabilistic bias analysis seen in part (a)."}
 
 include_graphics(here('figures/testpos-lag.pdf'))
 

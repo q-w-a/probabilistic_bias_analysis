@@ -63,11 +63,7 @@ We see agreement is much higher before the time period spanning December 2021 th
 
 As a result of these dramatic changes, Chitwood *et al.* @chitwood2022 made substantial changes to Covidestim, as noted in the model change log. Because the variant causes much milder infections, the infection fatality for Omicron infections is lower than previous variants, and death counts were much lower relative to the number of infections. To handle this change, rather than fitting model with deaths, they switched to using hospitalizations. They also allowed for the possibility of reinfections, since although reinfections were more rare with previous variants, Omicron is associated with higher reinfection rates [@pulliam2022]. The changes in the model may contribute to the differences we see between the probabilistic bias intervals and Covidestim intervals during the Omicron wave. 
 
-
-ADD TEST POSITIVITY FIGURE
-FIGURE OUT WHICH STATES HAVE LAGS
-
-Another difference we see is in the months of the summer of 2021, where the increase in Covidestim estimates appears lagged in comparison to the probabilistic bias simulation intervals. The difference we see between the Covidestim estimates and probabilistic bias intervals is likely a result of the way these approaches treat incomplete testing. The focus of the probabilistic bias analysis is to correct for incomplete testing, and as such the method is sensitive to changes in the total number tested and the positivity rate. By contrast, while Covidestim models probabilities of diagnosis by symptom state to allow for variation in case ascertainment, the total number of tests is not an input into the model, so model estimates are not affected by changes in testing rate. This is particularly relevant during the summer of 2021, when an increase in test positivity preceded the increase in observed tests, leading to an increase in the probabilistic bias simulation intervals that precedes the increase in Covidestim estimates. 
+Another difference we see is in the months of the summer of 2021, where the increase in Covidestim estimates appears lagged in comparison to the probabilistic bias simulation intervals. The difference we see between the Covidestim estimates and probabilistic bias intervals is likely a result of the way these approaches treat incomplete testing. The focus of the probabilistic bias analysis is to correct for incomplete testing, and as such the method is sensitive to changes in the total number tested and the positivity rate (see Figure DIAGRAM in the methods section). By contrast, while Covidestim models probabilities of diagnosis by symptom state to allow for variation in case ascertainment, the total number of tests is not an input into the model, so model estimates are not affected by changes in testing rate. This is particularly relevant during the summer of 2021, when an increase in test positivity preceded the increase in observed tests, leading to an increase in the probabilistic bias simulation intervals that precedes the increase in Covidestim estimates in many states (Supplementary Figure lagged-figs). Differences attributed to how these methods consider test positivity are likely to be heightened during times where increases in infections outpace testing capacity or test utilization.  
 
 
 ```{r simulation-intervals-state, fig.cap="Simulation intervals for each 2-week interval considered, for all states. For any given state, each vertical bar shows the 2.5\\% percentile and 97.5\\% percentile for the total number of infections in that two-week interval. Covidestim intervals summed over the same two-week time-scale are shown in red. The scale on the $y$-axis is distinct across states to highlight differences across time within each state.", fig.height=10,fig.width=14}
@@ -202,15 +198,29 @@ include_graphics(here("figures/cross_correlation_observed_pb.pdf"))
 ```
 
 
+# Discussion
+
+### Limitations
+
+- Validation:
+  - Wastewater encatchments do not fall exactly on county lines, so aggregation here contains limited information
+  - Covidestim -- sum of daily medians != median for entire two-week time interval
+- Repeat testing may bias estimates in places where this form of testing comprises a substantial proportion of total testing, but data on people-viral-total and people-viral-positive is not widely available 
 
 
 # Methods {#Methods}
 
 ## Data
 
-### Massachusetts County Level
+We acquired state-level PCR testing data from public-use data on HealthData.gov, which includes both positive and negative test counts [@unitedstatesdepartmentofhealthandhumanservices]. At the county level, we obtained publicly available data from Massachusetts published on the state government website [@departmentofpublichealth].
+
+Covidestim estimates for dates after December 2021 were obtained from the Covidestim API, and those  for dates after December 2021 were obtained from the legacy page. 
 
 ### State Level
+
+
+### Massachusetts County Level
+
 
 ### Survey Data 
 
@@ -272,12 +282,10 @@ Because of the heterogeneity in estimates of the percent of infections that are 
 
 
 
-### Limitations
 
-- Validation:
-  - Wastewater encatchments do not fall exactly on county lines, so aggregation here contains limited information
-  - Covidestim -- sum of daily medians != median for entire two-week time interval
-- Repeat testing may bias estimates in places where this form of testing comprises a substantial proportion of total testing, but data on people-viral-total and people-viral-positive is not widely available 
+# Data Availability 
+
+# Code Availability 
   
 # References
 

@@ -700,7 +700,9 @@ lagged_fig_a <- subset %>%
               labeller= labeller(
                 vlabel =as_labeller(TeX, default=label_parsed))) +
   scale_y_continuous(labels = comma) +
-  scale_x_date(date_breaks = "3 months", 
+  scale_x_date(
+    #date_breaks = "3 months", 
+    breaks=ymd("2021-03-12", "2021-05-21", "2021-07-30", "2021-10-08"),
                date_labels = "%b %Y") +
   theme_c(axis.text.x=element_text(size=7),
           axis.text.y = element_text(size=4.5),
